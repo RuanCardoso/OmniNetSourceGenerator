@@ -1,27 +1,37 @@
-﻿public partial class Test
+﻿namespace Omni.Core
 {
-	public static void Main()
+	[Omni("SyncMove", "SyncColor")]
+	public partial class TesteClass
 	{
+		static void Main()
+		{
+
+		}
+
+		//protected override void Ovr()
+		//{
+		//	base.Ovr();
+		//}
 	}
 
-	[Remote]
-	partial void Move(DataIOHandler IOHandler, ushort fromId, ushort toId, RemoteStats stats);
-
-	public override void MoveServerLogic(DataIOHandler IOHandler, ushort fromId, ushort toId, RemoteStats stats)
+	[Omni("SyncMove2", "SyncColor2")]
+	public partial class TesteClass2
 	{
 
+		//protected override void Ovr()
+		//{
+		//	base.Ovr();
+		//}
 	}
-}
 
-public struct RemoteStats
-{
-}
 
-public class DataIOHandler
-{
-}
+	[Omni("SyncMove3", "SyncColor3")]
+	public partial class TesteClass3
+	{
 
-public class RemoteAttribute : Attribute
-{
-
+		//protected override void Ovr()
+		//{
+		//	base.Ovr();
+		//}
+	}
 }
