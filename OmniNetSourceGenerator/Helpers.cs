@@ -29,7 +29,7 @@ namespace OmniNetSourceGenerator
 		public static string CreateNamespace(string @namespace, List<string> usings, Func<string> onNamespaceCreated = null)
 		{
 			StringBuilder builder = new StringBuilder();
-			builder.AppendLine(string.Join(";/\r\n", usings));
+			builder.AppendLine(string.Join("\r\n", usings));
 			if (!string.IsNullOrEmpty(@namespace))
 			{
 				CreateNamespace(@namespace, onNamespaceCreated, builder);

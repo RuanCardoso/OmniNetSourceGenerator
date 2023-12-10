@@ -52,6 +52,7 @@ namespace OmniNetSourceGenerator
 						yield return syntaxNode as T;
 					}
 				}
+				else continue;
 			}
 		}
 
@@ -66,6 +67,7 @@ namespace OmniNetSourceGenerator
 						yield return syntaxNode as T;
 					}
 				}
+				else continue;
 			}
 		}
 
@@ -106,6 +108,7 @@ namespace OmniNetSourceGenerator
 						}
 						else continue;
 					}
+					else continue;
 				}
 			}
 			return false;
@@ -121,23 +124,28 @@ namespace OmniNetSourceGenerator
 					{
 						if (identifierNameSyntax.Identifier.Text == attrName)
 						{
-							foreach (var attributeArgumentSyntax in attributeSyntax.ArgumentList.Arguments)
+							if (attributeSyntax.ArgumentList != null)
 							{
-								if (attributeArgumentSyntax.Expression is LiteralExpressionSyntax literalExpressionSyntax)
+								foreach (var attributeArgumentSyntax in attributeSyntax.ArgumentList.Arguments)
 								{
-									// Se o argumento for um literal, adiciona o valor à lista
-									yield return literalExpressionSyntax.Token.ValueText;
-								}
-								else
-								{
-									// Se o argumento não for um literal, você pode ajustar essa lógica conforme necessário
-									// Aqui, estamos adicionando a representação em string da expressão
-									yield return attributeArgumentSyntax.Expression.ToString();
+									if (attributeArgumentSyntax.Expression is LiteralExpressionSyntax literalExpressionSyntax)
+									{
+										// Se o argumento for um literal, adiciona o valor à lista
+										yield return literalExpressionSyntax.Token.ValueText;
+									}
+									else
+									{
+										// Se o argumento não for um literal, você pode ajustar essa lógica conforme necessário
+										// Aqui, estamos adicionando a representação em string da expressão
+										yield return attributeArgumentSyntax.Expression.ToString();
+									}
 								}
 							}
+							else continue;
 						}
 						else continue;
 					}
+					else continue;
 				}
 			}
 		}
