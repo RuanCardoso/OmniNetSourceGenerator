@@ -1,43 +1,21 @@
 ﻿namespace Omni.Core
 {
-	public struct RemoteStats
+	public class Remote: Attribute
 	{
-	}
+		public byte id;
+		public string id2;
+		public long id3;
 
-	public class DataIOHandler
-	{
-	}
-
-	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-	public class OmniAttribute : Attribute
-	{
-		public OmniAttribute(params string[] @params)
+		public Remote(byte id, string id2, long id3)
 		{
+			this.id = id;
+			this.id2 = id2;
+			this.id3 = id3;
 		}
 	}
 
-	public class RemoteAttribute : Attribute
+	public class NetworkBehaviour
 	{
-		public RemoteAttribute(byte id)
-		{
-		}
-	}
 
-	public class OmniObject : OmniDispatcher
-	{
-		public bool IsServer { get; }
-	}
-
-	public class OmniDispatcher
-	{
-		protected virtual void Ovr()
-		{
-
-		}
-	}
-
-	public class MonoBehaviour
-	{
-		public int ID = 10;
 	}
 }
