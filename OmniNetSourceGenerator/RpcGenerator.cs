@@ -19,18 +19,51 @@ namespace OmniNetSourceGenerator
 					string @class = classSyntax.GetIdentifierName();
 					builder.AppendLine(Helpers.CreateNamespace(classSyntax.GetNamespaceName(), new List<string> { "using Omni.Core;" }, () =>
 					{
-						return Helpers.CreateClass("public partial", @class, "NetworkBehaviour", onClassCreated: () =>
+						return Helpers.CreateClass("public partial", @class, "NetworkBehaviour", OnCreated: () =>
 						{
 							StringBuilder methodBuilder = new StringBuilder();
-							var attributes = classSyntax.GetAttributeParametersWithInfo(context.GetSemanticModel(classSyntax.SyntaxTree), "Remote");
-							foreach ((string name, string value, string type) in attributes)
+							IEnumerable<AttributeWithMultipleParameters> attributes = classSyntax.GetAttributesWithMultipleParameters(context.GetSemanticModel(classSyntax.SyntaxTree), "Remote");
+							foreach (AttributeWithMultipleParameters attribute in attributes)
 							{
-								methodBuilder.AppendLine("//" + name + " : " + value + " : " + type);
+								try
+								{
+									var idParameter = attribute.ParametersByName["Id"];
+									var nameParameter = attribute.ParametersByName["Name"];
+									var selfParameter = attribute.ParametersByName["Self"];
+									if (idParameter.Value != null && nameParameter.Value != null && selfParameter.Value != null)
+									{
+										bool isSelf = bool.Parse(selfParameter.Value);
+										if (isSelf)
+										{
+											methodBuilder.AppendLine("");
+											methodBuilder.AppendLine($"\t\t[Remote(Id = {idParameter.Value})]");
+											methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}(IDataReader reader, NetworkPeer peer);");
+										}
+										else
+										{
+											methodBuilder.AppendLine("");
+											methodBuilder.AppendLine($"\t\t[Remote(Id = {idParameter.Value})]");
+											methodBuilder.AppendLine($"\t\tprivate void zzzz{nameParameter.Value}zzzz(IDataReader reader, NetworkPeer peer)");
+											methodBuilder.AppendLine("\t\t{");
+											methodBuilder.AppendLine($"\t\t\tif (IsServer) {nameParameter.Value}_Server(reader, peer);");
+											methodBuilder.AppendLine($"\t\t\telse {nameParameter.Value}_Client(reader, peer);");
+											methodBuilder.AppendLine("\t\t}");
+											// Server Method
+											methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}_Server(IDataReader reader, NetworkPeer peer);");
+											// Client Method
+											methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}_Client(IDataReader reader, NetworkPeer peer);");
+										}
+									}
+								}
+								catch
+								{
+									continue;
+								}
 							}
 							return methodBuilder.ToString();
 						});
 					}));
-					context.AddSource($"{@class}_g", builder.ToString());
+					context.AddSource($"{@class}_g", builder.ToString().Trim());
 				}
 			}
 		}

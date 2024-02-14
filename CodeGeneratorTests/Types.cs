@@ -1,20 +1,24 @@
 ﻿namespace Omni.Core
 {
-	public class Remote: Attribute
+	[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
+	public class Remote : Attribute
 	{
-		public byte id;
-		public string id2;
-		public long id3;
-
-		public Remote(byte id, string id2, long id3)
-		{
-			this.id = id;
-			this.id2 = id2;
-			this.id3 = id3;
-		}
+		public byte Id { get; set; }
+		public string? Name { get; set; } // Roslyn Analyzer
+		public bool Self { get; set; } // Roslyn Analyzer
 	}
 
 	public class NetworkBehaviour
+	{
+		public bool IsServer;
+	}
+
+	public class NetworkPeer
+	{
+		
+	}
+
+	public class IDataReader
 	{
 
 	}

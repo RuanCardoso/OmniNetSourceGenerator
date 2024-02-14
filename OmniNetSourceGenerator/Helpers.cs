@@ -8,49 +8,49 @@ namespace OmniNetSourceGenerator
 {
 	internal static class Helpers
 	{
-		public static string CreateClass(string modifier, string className, string baseClassName = null, Func<string> onClassCreated = null)
+		public static string CreateClass(string modifier, string classname, string baseclassname = null, Func<string> OnCreated = null)
 		{
 			StringBuilder builder = new StringBuilder();
-			builder.AppendLine(baseClassName != null ? $"{modifier} class {className} : {baseClassName}" : $"{modifier} class {className}");
-			builder.AppendLine("{");
-			builder.AppendLine(onClassCreated?.Invoke());
-			builder.AppendLine("}");
+			builder.AppendLine("\t" + (baseclassname != null ? $"{modifier} class {classname} : {baseclassname}" : $"{modifier} class {classname}"));
+			builder.AppendLine("\t{");
+			builder.AppendLine("\t" + OnCreated?.Invoke());
+			builder.AppendLine("\t}");
 			return builder.ToString();
 		}
 
-		private static void CreateNamespace(string @namespace, Func<string> onNamespaceCreated, StringBuilder builder)
+		private static void CreateNamespace(string namespacename, Func<string> OnCreated, StringBuilder builder)
 		{
-			builder.AppendLine($"namespace {@namespace}");
+			builder.AppendLine($"namespace {namespacename}");
 			builder.AppendLine("{");
-			builder.AppendLine(onNamespaceCreated?.Invoke());
+			builder.AppendLine(OnCreated?.Invoke());
 			builder.AppendLine("}");
 		}
 
-		public static string CreateNamespace(string @namespace, List<string> usings, Func<string> onNamespaceCreated = null)
+		public static string CreateNamespace(string namespacename, List<string> usings, Func<string> OnCreated = null)
 		{
 			StringBuilder builder = new StringBuilder();
 			builder.AppendLine(string.Join("\r\n", usings));
-			if (!string.IsNullOrEmpty(@namespace))
+			if (!string.IsNullOrEmpty(namespacename))
 			{
-				CreateNamespace(@namespace, onNamespaceCreated, builder);
+				CreateNamespace(namespacename, OnCreated, builder);
 				return builder.ToString();
 			}
 			else
 			{
-				builder.AppendLine(onNamespaceCreated?.Invoke());
+				builder.AppendLine(OnCreated?.Invoke());
 				return builder.ToString();
 			}
 		}
 
-		public static string CreateNamespace(string @namespace, Func<string> onNamespaceCreated = null)
+		public static string CreateNamespace(string namespacename, Func<string> OnCreated = null)
 		{
-			if (!string.IsNullOrEmpty(@namespace))
+			if (!string.IsNullOrEmpty(namespacename))
 			{
 				StringBuilder builder = new StringBuilder();
-				CreateNamespace(@namespace, onNamespaceCreated, builder);
+				CreateNamespace(namespacename, OnCreated, builder);
 				return builder.ToString();
 			}
-			else return onNamespaceCreated?.Invoke();
+			else return OnCreated?.Invoke();
 		}
 
 		public static string GetHintName(GeneratorExecutionContext context)
@@ -66,7 +66,7 @@ namespace OmniNetSourceGenerator
 			}
 		}
 
-		public static void ClearLog()
+		public static void DeleteLog()
 		{
 			File.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "log.txt"));
 		}
