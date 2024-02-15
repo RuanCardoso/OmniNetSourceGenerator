@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SourceGenerator.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace SourceGenerator.Generators
@@ -21,9 +22,10 @@ namespace SourceGenerator.Generators
 					{
 						StringBuilder builder = new StringBuilder();
 						string @class = classSyntax.GetClassName();
-						builder.AppendLine(Helpers.CreateNamespace(classSyntax.GetNamespaceName(), new List<string> { "using Omni.Core;" }, () =>
+						var usings = classSyntax.GetAllUsingsDirective().Select(x => $"using {x.Name};");
+						builder.AppendLine(Helpers.CreateNamespace(classSyntax.GetNamespaceName(), usings, () =>
 						{
-							return Helpers.CreateClass("public partial", @class, "NetworkBehaviour", OnCreated: () =>
+							return Helpers.CreateClass("partial", @class, "NetworkBehaviour", OnCreated: () =>
 							{
 								StringBuilder methodBuilder = new StringBuilder();
 								IEnumerable<AttributeWithMultipleParameters> attributes = classSyntax.GetAttributesWithMultipleParameters(context.GetSemanticModel(classSyntax.SyntaxTree), "Remote");
@@ -80,7 +82,7 @@ namespace SourceGenerator.Generators
 								return methodBuilder.ToString();
 							});
 						}));
-						context.AddSource($"{@class}_g", builder.ToString().Trim());
+						context.AddSource($"{@class}__rpc_g", builder.ToString().Trim());
 					}
 				}
 			}

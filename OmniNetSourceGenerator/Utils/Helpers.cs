@@ -26,7 +26,7 @@ namespace SourceGenerator.Utils
 			builder.AppendLine("}");
 		}
 
-		public static string CreateNamespace(string namespacename, List<string> usings, Func<string> OnCreated = null)
+		public static string CreateNamespace(string namespacename, IEnumerable<string> usings, Func<string> OnCreated = null)
 		{
 			StringBuilder builder = new StringBuilder();
 			builder.AppendLine(string.Join("\r\n", usings));

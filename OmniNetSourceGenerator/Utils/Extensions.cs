@@ -153,25 +153,35 @@ namespace SourceGenerator.Utils
 			return syntaxNode.Name.ToString();
 		}
 
+		public static TypeSyntax GetDescendantTypeSyntax(SyntaxNode node)
+		{
+			return node.DescendantNodes().OfType<TypeSyntax>().First();
+		}
+
+		public static TypeSyntax GetAncestorsTypeSyntax(SyntaxNode node)
+		{
+			return node.Ancestors().OfType<TypeSyntax>().First();
+		}
+
 		public static MemberInfo GetFieldInfo(this VariableDeclaratorSyntax syntaxNode, SemanticModel semanticModel)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
 			EqualsValueClauseSyntax equalsValueClauseSyntax = syntaxNode.Initializer;
 			string identifierName = syntaxNode.Identifier.Text;
-			string initializerValue = equalsValueClauseSyntax == null ? "undefined" : equalsValueClauseSyntax.Value.ToString();
-			string typeName = equalsValueClauseSyntax == null ? "undefined" : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType?.Name;
+			string initializerValue = equalsValueClauseSyntax == null ? "" : equalsValueClauseSyntax.Value is LiteralExpressionSyntax literalExpressionSyntax ? literalExpressionSyntax.Token.ValueText : equalsValueClauseSyntax.Value.ToString();
+			string typeName = equalsValueClauseSyntax == null ? semanticModel.GetTypeInfo(GetDescendantTypeSyntax(syntaxNode.Parent)).ConvertedType?.Name : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType?.Name;
 			return new MemberInfo(identifierName, initializerValue, typeName);
 		}
 
-		public static MemberInfo GetFieldInfo(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel)
+		public static MemberInfo GetPropertyInfo(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
 			EqualsValueClauseSyntax equalsValueClauseSyntax = syntaxNode.Initializer;
 			string identifierName = syntaxNode.Identifier.Text;
-			string initializerValue = equalsValueClauseSyntax == null ? "undefined" : equalsValueClauseSyntax.Value.ToString();
-			string typeName = equalsValueClauseSyntax == null ? "undefined" : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType?.Name;
+			string initializerValue = equalsValueClauseSyntax == null ? "" : equalsValueClauseSyntax.Value is LiteralExpressionSyntax literalExpressionSyntax ? literalExpressionSyntax.Token.ValueText : equalsValueClauseSyntax.Value.ToString();
+			string typeName = equalsValueClauseSyntax == null ? semanticModel.GetTypeInfo(GetDescendantTypeSyntax(syntaxNode.Parent)).ConvertedType?.Name : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType?.Name;
 			return new MemberInfo(identifierName, initializerValue, typeName);
 		}
 
@@ -440,6 +450,11 @@ namespace SourceGenerator.Utils
 			ThrowAnErrorIfIsNull(syntaxNode);
 			return syntaxNode.HasBaseClass() ? syntaxNode.BaseList.Types
 				: (SeparatedSyntaxList<BaseTypeSyntax>)default;
+		}
+
+		public static IEnumerable<UsingDirectiveSyntax> GetAllUsingsDirective(this SyntaxNode node)
+		{
+			return GetDescendantDeclarationSyntax<UsingDirectiveSyntax>(node.SyntaxTree);
 		}
 	}
 }
