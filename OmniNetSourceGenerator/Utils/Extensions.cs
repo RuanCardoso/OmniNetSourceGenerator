@@ -1,11 +1,26 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace OmniNetSourceGenerator
+namespace SourceGenerator.Utils
 {
+	internal class MemberInfo
+	{
+		internal MemberInfo(string name, string value, string typeName)
+		{
+			Name = name;
+			Value = value;
+			TypeName = typeName;
+		}
+
+		internal string Name { get; }
+		internal string Value { get; }
+		internal string TypeName { get; }
+	}
+
 	internal class AttributeWithMultipleParameters
 	{
 		internal class Parameter
@@ -28,13 +43,22 @@ namespace OmniNetSourceGenerator
 
 	internal static class Extensions
 	{
+		private static void ThrowAnErrorIfIsNull<T>(T value)
+		{
+			if (value == null)
+				throw new NullReferenceException($"NullReferenceException -> The type {typeof(T).Name} is null!");
+		}
+
 		public static SemanticModel GetSemanticModel(this GeneratorExecutionContext context, SyntaxTree syntaxTree)
 		{
+			ThrowAnErrorIfIsNull(context);
+			ThrowAnErrorIfIsNull(syntaxTree);
 			return context.Compilation.GetSemanticModel(syntaxTree);
 		}
 
-		public static bool GetDeclarationSyntax<T>(this SyntaxNode syntaxNode, out T declarationSyntax) where T : SyntaxNode
+		public static bool TryGetDeclarationSyntax<T>(this SyntaxNode syntaxNode, out T declarationSyntax) where T : SyntaxNode
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
 			declarationSyntax = default;
 			if (syntaxNode is T @class)
 			{
@@ -46,9 +70,11 @@ namespace OmniNetSourceGenerator
 
 		public static IEnumerable<T> GetDescendantDeclarationSyntax<T>(this SyntaxTree syntaxTree) where T : SyntaxNode
 		{
+			ThrowAnErrorIfIsNull(syntaxTree);
 			if (syntaxTree.TryGetRoot(out SyntaxNode root))
 			{
-				foreach (SyntaxNode syntaxNode in root.DescendantNodes().OfType<T>())
+				var nodes = root.DescendantNodes().OfType<T>();
+				foreach (SyntaxNode syntaxNode in nodes)
 				{
 					yield return syntaxNode as T;
 				}
@@ -57,9 +83,11 @@ namespace OmniNetSourceGenerator
 
 		public static IEnumerable<T> GetAncestorsDeclarationSyntax<T>(this SyntaxTree syntaxTree) where T : SyntaxNode
 		{
+			ThrowAnErrorIfIsNull(syntaxTree);
 			if (syntaxTree.TryGetRoot(out SyntaxNode root))
 			{
-				foreach (SyntaxNode syntaxNode in root.Ancestors().OfType<T>())
+				var nodes = root.Ancestors().OfType<T>();
+				foreach (SyntaxNode syntaxNode in nodes)
 				{
 					yield return syntaxNode as T;
 				}
@@ -68,11 +96,13 @@ namespace OmniNetSourceGenerator
 
 		public static IEnumerable<T> GetDescendantDeclarationSyntax<T>(this GeneratorExecutionContext context) where T : SyntaxNode
 		{
+			ThrowAnErrorIfIsNull(context);
 			foreach (SyntaxTree syntaxTree in context.Compilation.SyntaxTrees)
 			{
 				if (syntaxTree.TryGetRoot(out SyntaxNode root))
 				{
-					foreach (SyntaxNode syntaxNode in root.DescendantNodes().OfType<T>())
+					var nodes = root.DescendantNodes().OfType<T>();
+					foreach (SyntaxNode syntaxNode in nodes)
 					{
 						yield return syntaxNode as T;
 					}
@@ -83,11 +113,14 @@ namespace OmniNetSourceGenerator
 
 		public static IEnumerable<T> GetAncestorsDeclarationSyntax<T>(this GeneratorExecutionContext context) where T : SyntaxNode
 		{
+
+			ThrowAnErrorIfIsNull(context);
 			foreach (SyntaxTree syntaxTree in context.Compilation.SyntaxTrees)
 			{
 				if (syntaxTree.TryGetRoot(out SyntaxNode root))
 				{
-					foreach (SyntaxNode syntaxNode in root.Ancestors().OfType<T>())
+					var nodes = root.Ancestors().OfType<T>();
+					foreach (SyntaxNode syntaxNode in nodes)
 					{
 						yield return syntaxNode as T;
 					}
@@ -96,43 +129,125 @@ namespace OmniNetSourceGenerator
 			}
 		}
 
-		public static string GetIdentifierName(this PropertyDeclarationSyntax syntaxNode) => syntaxNode?.Identifier.Text;
-		public static string GetIdentifierName(this MethodDeclarationSyntax syntaxNode) => syntaxNode?.Identifier.Text;
-		public static string GetIdentifierName(this ClassDeclarationSyntax syntaxNode) => syntaxNode?.Identifier.Text;
-		public static string GetIdentifierName(this NamespaceDeclarationSyntax syntaxNode) => syntaxNode?.Name.ToString();
+		public static SeparatedSyntaxList<VariableDeclaratorSyntax> GetFieldVariables(this FieldDeclarationSyntax syntaxNode)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Declaration.Variables;
+		}
+
+		public static string GetIdentifierName(this MethodDeclarationSyntax syntaxNode)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Identifier.Text;
+		}
+
+		public static string GetIdentifierName(this ClassDeclarationSyntax syntaxNode)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Identifier.Text;
+		}
+
+		public static string GetIdentifierName(this NamespaceDeclarationSyntax syntaxNode)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Name.ToString();
+		}
+
+		public static MemberInfo GetFieldInfo(this VariableDeclaratorSyntax syntaxNode, SemanticModel semanticModel)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ThrowAnErrorIfIsNull(semanticModel);
+			EqualsValueClauseSyntax equalsValueClauseSyntax = syntaxNode.Initializer;
+			string identifierName = syntaxNode.Identifier.Text;
+			string initializerValue = equalsValueClauseSyntax == null ? "undefined" : equalsValueClauseSyntax.Value.ToString();
+			string typeName = equalsValueClauseSyntax == null ? "undefined" : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType?.Name;
+			return new MemberInfo(identifierName, initializerValue, typeName);
+		}
+
+		public static MemberInfo GetFieldInfo(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ThrowAnErrorIfIsNull(semanticModel);
+			EqualsValueClauseSyntax equalsValueClauseSyntax = syntaxNode.Initializer;
+			string identifierName = syntaxNode.Identifier.Text;
+			string initializerValue = equalsValueClauseSyntax == null ? "undefined" : equalsValueClauseSyntax.Value.ToString();
+			string typeName = equalsValueClauseSyntax == null ? "undefined" : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType?.Name;
+			return new MemberInfo(identifierName, initializerValue, typeName);
+		}
 
 		public static NamespaceDeclarationSyntax GetNamespaceDeclarationSyntax(this SyntaxNode syntaxNode)
 		{
-			return syntaxNode.Parent is NamespaceDeclarationSyntax namespaceDeclarationSyntax
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode is NamespaceDeclarationSyntax self
+				? self
+				: syntaxNode.Parent is NamespaceDeclarationSyntax namespaceDeclarationSyntax
 				? namespaceDeclarationSyntax
-				: syntaxNode.Parent is null ? null : GetNamespaceDeclarationSyntax(syntaxNode.Parent);
+				: syntaxNode.Parent?.GetNamespaceDeclarationSyntax();
 		}
 
 		public static string GetNamespaceName(this SyntaxNode syntaxNode)
 		{
-			return GetNamespaceDeclarationSyntax(syntaxNode)?.GetIdentifierName();
+			ThrowAnErrorIfIsNull(syntaxNode);
+			NamespaceDeclarationSyntax namespaceDeclarationSyntax = syntaxNode.GetNamespaceDeclarationSyntax();
+			return namespaceDeclarationSyntax != null ? namespaceDeclarationSyntax.GetIdentifierName() : "// NAMESPACE UNDEFINED";
 		}
 
 		public static ClassDeclarationSyntax GetClassDeclarationSyntax(this SyntaxNode syntaxNode)
 		{
-			return syntaxNode.Parent is ClassDeclarationSyntax classDeclarationSyntax
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode is ClassDeclarationSyntax self
+				? self
+				: syntaxNode.Parent is ClassDeclarationSyntax classDeclarationSyntax
 				? classDeclarationSyntax
-				: syntaxNode.Parent is null ? null : GetClassDeclarationSyntax(syntaxNode.Parent);
+				: syntaxNode.Parent?.GetClassDeclarationSyntax();
 		}
 
 		public static string GetClassName(this SyntaxNode syntaxNode)
 		{
-			return GetClassDeclarationSyntax(syntaxNode)?.GetIdentifierName();
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ClassDeclarationSyntax classDeclarationSyntax = syntaxNode.GetClassDeclarationSyntax();
+			return classDeclarationSyntax != null ? classDeclarationSyntax.GetIdentifierName() : "// NAMESPACE UNDEFINED";
 		}
 
-		public static bool HasModifier(this MemberDeclarationSyntax syntaxNode, SyntaxKind syntaxKind) => syntaxNode.Modifiers.Any(syntaxKind);
-		public static bool HasModifier(this PropertyDeclarationSyntax syntaxNode, SyntaxKind syntaxKind) => syntaxNode.Modifiers.Any(syntaxKind);
-		public static bool HasModifier(this ClassDeclarationSyntax syntaxNode, SyntaxKind syntaxKind) => syntaxNode.Modifiers.Any(syntaxKind);
-		public static bool HasModifier(this MethodDeclarationSyntax syntaxNode, SyntaxKind syntaxKind) => syntaxNode.Modifiers.Any(syntaxKind);
-		public static bool HasModifier(this NamespaceDeclarationSyntax syntaxNode, SyntaxKind syntaxKind) => syntaxNode.Modifiers.Any(syntaxKind);
+		public static bool HasModifier(this MemberDeclarationSyntax syntaxNode, SyntaxKind syntaxKind)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Modifiers.Any(syntaxKind);
+		}
+
+		public static bool HasModifier(this PropertyDeclarationSyntax syntaxNode, SyntaxKind syntaxKind)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Modifiers.Any(syntaxKind);
+		}
+
+		public static bool HasModifier(this ClassDeclarationSyntax syntaxNode, SyntaxKind syntaxKind)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Modifiers.Any(syntaxKind);
+		}
+
+		public static bool HasModifier(this MethodDeclarationSyntax syntaxNode, SyntaxKind syntaxKind)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Modifiers.Any(syntaxKind);
+		}
+
+		public static bool HasModifier(this NamespaceDeclarationSyntax syntaxNode, SyntaxKind syntaxKind)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Modifiers.Any(syntaxKind);
+		}
+
+		public static bool HasModifier(this FieldDeclarationSyntax syntaxNode, SyntaxKind syntaxKind)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Modifiers.Any(syntaxKind);
+		}
 
 		private static bool Internal_HasAttribute(MemberDeclarationSyntax syntaxNode, string attrName)
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
 			foreach (AttributeListSyntax listSyntax in syntaxNode.AttributeLists)
 			{
 				foreach (var attributeSyntax in listSyntax.Attributes)
@@ -153,26 +268,38 @@ namespace OmniNetSourceGenerator
 
 		public static bool HasAttribute(this MethodDeclarationSyntax syntaxNode, string attrName)
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
 			return Internal_HasAttribute(syntaxNode, attrName);
 		}
 
 		public static bool HasAttribute(this ClassDeclarationSyntax syntaxNode, string attrName)
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
 			return Internal_HasAttribute(syntaxNode, attrName);
 		}
 
 		public static bool HasAttribute(this MemberDeclarationSyntax syntaxNode, string attrName)
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
 			return Internal_HasAttribute(syntaxNode, attrName);
 		}
 
 		public static bool HasAttribute(this PropertyDeclarationSyntax syntaxNode, string attrName)
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return Internal_HasAttribute(syntaxNode, attrName);
+		}
+
+		public static bool HasAttribute(this FieldDeclarationSyntax syntaxNode, string attrName)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
 			return Internal_HasAttribute(syntaxNode, attrName);
 		}
 
 		private static IEnumerable<AttributeWithMultipleParameters> Internal_GetAttributesWithMultipleParameters(this MemberDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ThrowAnErrorIfIsNull(semanticModel);
 			foreach (AttributeListSyntax listSyntax in syntaxNode.AttributeLists)
 			{
 				foreach (var attributeSyntax in listSyntax.Attributes)
@@ -202,26 +329,42 @@ namespace OmniNetSourceGenerator
 
 		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this ClassDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
-			return Internal_GetAttributesWithMultipleParameters(syntaxNode, semanticModel, attrName);
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ThrowAnErrorIfIsNull(semanticModel);
+			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
 		}
 
 		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
-			return Internal_GetAttributesWithMultipleParameters(syntaxNode, semanticModel, attrName);
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ThrowAnErrorIfIsNull(semanticModel);
+			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
 		}
 
 		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this MemberDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
-			return Internal_GetAttributesWithMultipleParameters(syntaxNode, semanticModel, attrName);
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ThrowAnErrorIfIsNull(semanticModel);
+			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
 		}
 
 		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this MethodDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
-			return Internal_GetAttributesWithMultipleParameters(syntaxNode, semanticModel, attrName);
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ThrowAnErrorIfIsNull(semanticModel);
+			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
+		}
+
+		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this FieldDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			ThrowAnErrorIfIsNull(semanticModel);
+			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
 		}
 
 		private static IEnumerable<string> Internal_GetAttributesWithSingleParameter(this MemberDeclarationSyntax syntaxNode, string attrName)
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
 			foreach (AttributeListSyntax listSyntax in syntaxNode.AttributeLists)
 			{
 				foreach (var attributeSyntax in listSyntax.Attributes)
@@ -256,28 +399,39 @@ namespace OmniNetSourceGenerator
 			}
 		}
 
+		public static IEnumerable<string> GetAttributesWithSingleParameter(this FieldDeclarationSyntax syntaxNode, string attrName)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Internal_GetAttributesWithSingleParameter(attrName);
+		}
+
 		public static IEnumerable<string> GetAttributesWithSingleParameter(this ClassDeclarationSyntax syntaxNode, string attrName)
 		{
-			return Internal_GetAttributesWithSingleParameter(syntaxNode, attrName);
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Internal_GetAttributesWithSingleParameter(attrName);
 		}
 
 		public static IEnumerable<string> GetAttributesWithSingleParameter(this MemberDeclarationSyntax syntaxNode, string attrName)
 		{
-			return Internal_GetAttributesWithSingleParameter(syntaxNode, attrName);
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Internal_GetAttributesWithSingleParameter(attrName);
 		}
 
 		public static IEnumerable<string> GetAttributesWithSingleParameter(this PropertyDeclarationSyntax syntaxNode, string attrName)
 		{
-			return Internal_GetAttributesWithSingleParameter(syntaxNode, attrName);
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Internal_GetAttributesWithSingleParameter(attrName);
 		}
 
 		public static IEnumerable<string> GetAttributesWithSingleParameter(this MethodDeclarationSyntax syntaxNode, string attrName)
 		{
-			return Internal_GetAttributesWithSingleParameter(syntaxNode, attrName);
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.Internal_GetAttributesWithSingleParameter(attrName);
 		}
 
 		public static bool HasBaseClass(this ClassDeclarationSyntax syntaxNode)
 		{
+			ThrowAnErrorIfIsNull(syntaxNode);
 			return syntaxNode.BaseList != null;
 		}
 	}

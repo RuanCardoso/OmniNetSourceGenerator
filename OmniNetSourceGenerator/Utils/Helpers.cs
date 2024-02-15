@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace OmniNetSourceGenerator
+namespace SourceGenerator.Utils
 {
 	internal static class Helpers
 	{
@@ -58,17 +58,17 @@ namespace OmniNetSourceGenerator
 			return $"{context.Compilation.AssemblyName}_g";
 		}
 
-		public static void Log(string message, bool append = true)
+		public static void Log(string name, string message, bool append = true)
 		{
-			using (StreamWriter writer = new StreamWriter(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "log.txt"), append))
+			using (StreamWriter writer = new StreamWriter(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "source_gen_log.txt"), append))
 			{
-				writer.WriteLine($"{DateTime.Now} - {message}");
+				writer.WriteLine($"{DateTime.Now} - {name} - {message}");
 			}
 		}
 
 		public static void DeleteLog()
 		{
-			File.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "log.txt"));
+			File.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "source_gen_log.txt"));
 		}
 	}
 }
