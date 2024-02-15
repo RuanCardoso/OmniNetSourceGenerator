@@ -189,7 +189,7 @@ namespace SourceGenerator.Utils
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			NamespaceDeclarationSyntax namespaceDeclarationSyntax = syntaxNode.GetNamespaceDeclarationSyntax();
-			return namespaceDeclarationSyntax != null ? namespaceDeclarationSyntax.GetIdentifierName() : "// NAMESPACE UNDEFINED";
+			return namespaceDeclarationSyntax != null ? namespaceDeclarationSyntax.GetIdentifierName() : "";
 		}
 
 		public static ClassDeclarationSyntax GetClassDeclarationSyntax(this SyntaxNode syntaxNode)
@@ -206,7 +206,7 @@ namespace SourceGenerator.Utils
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ClassDeclarationSyntax classDeclarationSyntax = syntaxNode.GetClassDeclarationSyntax();
-			return classDeclarationSyntax != null ? classDeclarationSyntax.GetIdentifierName() : "// NAMESPACE UNDEFINED";
+			return classDeclarationSyntax != null ? classDeclarationSyntax.GetIdentifierName() : "";
 		}
 
 		public static bool HasModifier(this MemberDeclarationSyntax syntaxNode, SyntaxKind syntaxKind)
@@ -433,6 +433,13 @@ namespace SourceGenerator.Utils
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			return syntaxNode.BaseList != null;
+		}
+
+		public static SeparatedSyntaxList<BaseTypeSyntax> GetBaseClasses(this ClassDeclarationSyntax syntaxNode)
+		{
+			ThrowAnErrorIfIsNull(syntaxNode);
+			return syntaxNode.HasBaseClass() ? syntaxNode.BaseList.Types
+				: (SeparatedSyntaxList<BaseTypeSyntax>)default;
 		}
 	}
 }
