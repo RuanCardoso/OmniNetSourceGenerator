@@ -23,20 +23,24 @@ namespace SourceGenerator.Generators
 						var classGroups = syncVarSyntaxReceiver.FieldDeclarationSyntaxes.GroupBy(x => x.ClassDeclarationSyntax);
 						foreach (var classGroup in classGroups)
 						{
+							int netVarId = 0;
 							ClassDeclarationSyntax classDeclarationSyntax = classGroup.Key;
 							StringBuilder classBuilder = new StringBuilder();
 							StringBuilder fieldBuilder = new StringBuilder();
 							string @class = classDeclarationSyntax.GetClassName();
 							string @namespace = classDeclarationSyntax.GetNamespaceName();
+							string methodName = $"__{Math.Abs(@class.GetHashCode())}";
 							foreach (var fieldDeclarationSyntax in classGroup)
 							{
 								var fieldSyntaxes = fieldDeclarationSyntax.FieldDeclarationSyntax.GetFieldVariables();
 								foreach (var fieldSyntax in fieldSyntaxes)
 								{
+									if (netVarId >= byte.MaxValue)
+										continue;
+
 									MemberInfo fieldInfo = fieldSyntax.GetFieldInfo(context.GetSemanticModel(fieldSyntax.SyntaxTree));
 									string fieldName = fieldInfo.Name.Replace("m_", "");
 									string propertyName = $"{char.ToUpperInvariant(fieldName[0])}{fieldName.Substring(1)}";
-									fieldBuilder.AppendLine("");
 									fieldBuilder.AppendLine($"\t\tprivate {fieldInfo.TypeName} {propertyName}");
 									fieldBuilder.AppendLine("\t\t{");
 									fieldBuilder.AppendLine("\t\t\tget");
@@ -45,6 +49,8 @@ namespace SourceGenerator.Generators
 									fieldBuilder.AppendLine("\t\t\t}");
 									fieldBuilder.AppendLine("\t\t\tset");
 									fieldBuilder.AppendLine("\t\t\t{");
+									fieldBuilder.AppendLine($"\t\t\t\t {methodName}<{fieldInfo.TypeName}>({fieldInfo.Name}, value, \"{fieldInfo.TypeName}\", \"{fieldInfo.Name}\", {++netVarId}, {fieldInfo.IsPrimitiveType.ToString().ToLowerInvariant()}, {fieldInfo.IsValueType.ToString().ToLowerInvariant()}, \"{fieldInfo.TypeKind}\");");
+									fieldBuilder.AppendLine($"\t\t\t\t {fieldInfo.Name} = value;");
 									fieldBuilder.AppendLine("\t\t\t}");
 									fieldBuilder.AppendLine("\t\t}");
 								}
@@ -55,47 +61,20 @@ namespace SourceGenerator.Generators
 							{
 								return Helpers.CreateClass("partial", @class, "NetworkBehaviour", OnCreated: () =>
 								{
-									return fieldBuilder.ToString();
+									StringBuilder codeBuilder = new StringBuilder();
+									codeBuilder.AppendLine("");
+									codeBuilder.AppendLine($"\t\tprivate void {methodName}<T>(T oldValue, T newValue, string type, string netVarName, int id, bool isPrimitiveType, bool isValueType, string typeKind)");
+									codeBuilder.AppendLine("\t\t{");
+									codeBuilder.AppendLine("\t\t\tif(OnPropertyChanged(netVarName, id))");
+									codeBuilder.AppendLine("\t\t\t\t___2205032024<T>(oldValue, newValue, type, netVarName, id, isPrimitiveType, isValueType, typeKind);");
+									codeBuilder.AppendLine("\t\t}");
+									codeBuilder.AppendLine(fieldBuilder.ToString());
+									return codeBuilder.ToString();
 								});
 							}));
 							context.AddSource($"{@class}__syncvar_g", classBuilder.ToString().Trim());
 						}
 					}
-
-
-					//foreach (var fieldDeclarationSyntax in rpcSyntaxReceiver.FieldDeclarationSyntaxes)
-					//{
-					//	StringBuilder builder = new StringBuilder();
-					//	string @class = fieldDeclarationSyntax.ClassDeclarationSyntax.GetClassName();
-					//	string @namespace = fieldDeclarationSyntax.NamespaceDeclarationSyntax.GetNamespaceName();
-					//	builder.AppendLine(Helpers.CreateNamespace(@namespace, new List<string> { "using Omni.Core;" }, () =>
-					//	{
-					//		return Helpers.CreateClass("partial", @class, "NetworkBehaviour", OnCreated: () =>
-					//		{
-					//			StringBuilder fieldBuilder = new StringBuilder();
-					//			var fieldSyntaxes = fieldDeclarationSyntax.FieldDeclarationSyntax.GetFieldVariables();
-					//			foreach (var fieldSyntax in fieldSyntaxes)
-					//			{
-					//				MemberInfo fieldInfo = fieldSyntax.GetFieldInfo(context.GetSemanticModel(fieldSyntax.SyntaxTree));
-					//				string fieldName = fieldInfo.Name.Replace("m_", "");
-					//				string propertyName = $"{char.ToUpperInvariant(fieldName[0])}{fieldName.Substring(1)}";
-					//				fieldBuilder.AppendLine("");
-					//				fieldBuilder.AppendLine($"\t\tprivate {fieldInfo.TypeName} {propertyName}");
-					//				fieldBuilder.AppendLine("\t\t{");
-					//				fieldBuilder.AppendLine("\t\t\tget");
-					//				fieldBuilder.AppendLine("\t\t\t{");
-					//				fieldBuilder.AppendLine($"\t\t\t\t return {fieldInfo.Name};");
-					//				fieldBuilder.AppendLine("\t\t\t}");
-					//				fieldBuilder.AppendLine("\t\t\tset");
-					//				fieldBuilder.AppendLine("\t\t\t{");
-					//				fieldBuilder.AppendLine("\t\t\t}");
-					//				fieldBuilder.AppendLine("\t\t}");
-					//			}
-					//			return fieldBuilder.ToString();
-					//		});
-					//	}));
-					//	context.AddSource($"{@class}__syncvar_g", builder.ToString().Trim());
-					//}
 				}
 			}
 			catch (Exception ex)

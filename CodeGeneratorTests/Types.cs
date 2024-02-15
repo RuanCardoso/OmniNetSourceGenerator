@@ -1,5 +1,5 @@
-﻿using a.a.e.d.aaaa;
-using Omni.Core;
+﻿using Omni.Core;
+using Programa.Zeth;
 
 namespace Azeth
 {
@@ -40,6 +40,17 @@ namespace Omni.Core
 		{
 
 		}
+
+		// Sync Net Var with Roslyn Generators (:
+		protected virtual bool OnPropertyChanged(string netVarName, int id) => true;
+#pragma warning disable CA1822
+#pragma warning disable IDE1006
+		protected void ___2205032024<T>(T oldValue, T newValue, string type, string netVarName, int id, bool isPrimitiveType, bool isValueType, string typeKind) // called when 
+#pragma warning restore IDE1006
+#pragma warning restore CA1822
+		{
+
+		}
 	}
 
 	public class DataDeliveryMode
@@ -62,35 +73,35 @@ namespace Omni.Core
 	}
 }
 
-//namespace a
-//{
-[Remote(Id = 1, Name = "Syncot2", Self = true)]
-[Remote(Id = 3, Name = "Syncove", Self = false)]
-public partial class TesteClass23 : NetworkBehaviour
+namespace a
 {
-	[NetVar]
-	private int teste = 100;
-
-	[NetVar]
-	private string teste2 = "100";
-
-	[NetVar]
-	private aa teste3 = aa.a;
-
-	[NetVar]
-	private bb teste4 = new();
-
-	[NetVar]
-	private vv teste5 = new();
-
-	partial void Syncot2(IDataReader reader, NetworkPeer peer)
+	[Remote(Id = 1, Name = "Syncot2", Self = true)]
+	[Remote(Id = 3, Name = "Syncove", Self = false)]
+	public partial class TesteClass23 : NetworkBehaviour
 	{
-		throw new NotImplementedException();
-	}
+		[NetVar]
+		private int teste = 100;
 
-	void Test()
-	{
+		[NetVar]
+		private string teste2 = "100";
 
+		[NetVar]
+		private aa teste3 = aa.a;
+
+		[NetVar]
+		private bb teste4 = new();
+
+		[NetVar]
+		private vv teste5 = new();
+
+		partial void Syncot2(IDataReader reader, NetworkPeer peer)
+		{
+			throw new NotImplementedException();
+		}
+
+		void Test()
+		{
+
+		}
 	}
 }
-//}

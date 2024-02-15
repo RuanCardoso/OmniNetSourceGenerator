@@ -1,9 +1,10 @@
 ﻿using Azeth;
 using Omni.Core;
 
-namespace a.a.e.d.aaaa
+namespace Programa.Zeth
 {
-	enum aa {
+	enum aa
+	{
 		a
 	}
 
@@ -14,7 +15,8 @@ namespace a.a.e.d.aaaa
 
 	struct vv
 	{
-
+		string a;
+		//bb a2;
 	}
 
 	[Remote(Id = 5, Name = "SyncRot", Self = true)]
@@ -35,13 +37,34 @@ namespace a.a.e.d.aaaa
 
 		[NetVar]
 		private vv teste5 = new();
-		
-		//[NetVar]
-		//private Player teste6 = new();
+
+		[NetVar]
+		private Player teste6 = new();
+
+		[NetVar]
+		private vv[] teste62 = new vv[1];
+
+		[NetVar]
+		private Player[] teste162 = Array.Empty<Player>();
+
+		[NetVar]
+		private List<vv> teste621 = new();
+
+		[NetVar]
+		private List<Player> testea621 = new();
+
+		[NetVar]
+		private Dictionary<int, Player> testea62a1 = new();
 
 		private static void Main()
 		{
 
+		}
+
+		protected override bool OnPropertyChanged(string netVarName, int id)
+		{
+			Console.WriteLine(netVarName);
+			return true;
 		}
 
 		partial void SyncRot(IDataReader reader, NetworkPeer peer)
@@ -51,7 +74,7 @@ namespace a.a.e.d.aaaa
 
 		void Test()
 		{
-			
+
 		}
 	}
 }

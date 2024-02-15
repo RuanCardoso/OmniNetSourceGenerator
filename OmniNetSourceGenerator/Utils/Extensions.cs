@@ -9,16 +9,22 @@ namespace SourceGenerator.Utils
 {
 	internal class MemberInfo
 	{
-		internal MemberInfo(string name, string value, string typeName)
+		internal MemberInfo(string name, string value, string typeName, bool isPrimitiveType, bool isValueType, TypeKind typeKind)
 		{
 			Name = name;
 			Value = value;
 			TypeName = typeName;
+			IsPrimitiveType = isPrimitiveType;
+			IsValueType = isValueType;
+			TypeKind = typeKind;
 		}
 
-		internal string Name { get; }
-		internal string Value { get; }
-		internal string TypeName { get; }
+		internal string Name { get; set; }
+		internal string Value { get; set; }
+		internal string TypeName { get; set; }
+		internal bool IsPrimitiveType { get; set; }
+		internal bool IsValueType { get; set; }
+		internal TypeKind TypeKind { get; set; }
 	}
 
 	internal class AttributeWithMultipleParameters
@@ -170,8 +176,8 @@ namespace SourceGenerator.Utils
 			EqualsValueClauseSyntax equalsValueClauseSyntax = syntaxNode.Initializer;
 			string identifierName = syntaxNode.Identifier.Text;
 			string initializerValue = equalsValueClauseSyntax == null ? "" : equalsValueClauseSyntax.Value is LiteralExpressionSyntax literalExpressionSyntax ? literalExpressionSyntax.Token.ValueText : equalsValueClauseSyntax.Value.ToString();
-			string typeName = equalsValueClauseSyntax == null ? semanticModel.GetTypeInfo(GetDescendantTypeSyntax(syntaxNode.Parent)).ConvertedType?.Name : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType?.Name;
-			return new MemberInfo(identifierName, initializerValue, typeName);
+			var typeSymbol = equalsValueClauseSyntax == null ? semanticModel.GetTypeInfo(GetDescendantTypeSyntax(syntaxNode.Parent)).ConvertedType : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType;
+			return new MemberInfo(identifierName, initializerValue, typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), typeSymbol.IsUnmanagedType, typeSymbol.IsValueType, typeSymbol.TypeKind);
 		}
 
 		public static MemberInfo GetPropertyInfo(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel)
@@ -181,8 +187,8 @@ namespace SourceGenerator.Utils
 			EqualsValueClauseSyntax equalsValueClauseSyntax = syntaxNode.Initializer;
 			string identifierName = syntaxNode.Identifier.Text;
 			string initializerValue = equalsValueClauseSyntax == null ? "" : equalsValueClauseSyntax.Value is LiteralExpressionSyntax literalExpressionSyntax ? literalExpressionSyntax.Token.ValueText : equalsValueClauseSyntax.Value.ToString();
-			string typeName = equalsValueClauseSyntax == null ? semanticModel.GetTypeInfo(GetDescendantTypeSyntax(syntaxNode.Parent)).ConvertedType?.Name : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType?.Name;
-			return new MemberInfo(identifierName, initializerValue, typeName);
+			var typeSymbol = equalsValueClauseSyntax == null ? semanticModel.GetTypeInfo(GetDescendantTypeSyntax(syntaxNode.Parent)).ConvertedType : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType;
+			return new MemberInfo(identifierName, initializerValue, typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), typeSymbol.IsUnmanagedType, typeSymbol.IsValueType, typeSymbol.TypeKind);
 		}
 
 		public static NamespaceDeclarationSyntax GetNamespaceDeclarationSyntax(this SyntaxNode syntaxNode)
@@ -323,7 +329,7 @@ namespace SourceGenerator.Utils
 							foreach (var attributeArgumentSyntax in attributeSyntax.ArgumentList.Arguments)
 							{
 								string pName = attributeArgumentSyntax.NameColon?.Name.Identifier.Text ?? attributeArgumentSyntax.NameEquals?.Name.Identifier.Text ?? $"p{pNameIndex++}";
-								string pTypeName = semanticModel.GetTypeInfo(attributeArgumentSyntax.Expression).ConvertedType.Name;
+								string pTypeName = semanticModel.GetTypeInfo(attributeArgumentSyntax.Expression).ConvertedType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
 								string pValue = attributeArgumentSyntax.Expression is LiteralExpressionSyntax literalExpressionSyntax ? literalExpressionSyntax.Token.ValueText : attributeArgumentSyntax.Expression.ToString();
 								attributeWithMultipleParameters.Parameters.Add(new AttributeWithMultipleParameters.Parameter(pName, pValue, pTypeName));
 								attributeWithMultipleParameters.ParametersByName.Add(pName, new AttributeWithMultipleParameters.Parameter(pName, pValue, pTypeName));
