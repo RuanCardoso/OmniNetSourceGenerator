@@ -28,55 +28,65 @@ namespace SourceGenerator.Generators
 							return Helpers.CreateClass("partial", @class, "NetworkBehaviour", OnCreated: () =>
 							{
 								StringBuilder methodBuilder = new StringBuilder();
-								IEnumerable<AttributeWithMultipleParameters> attributes = classSyntax.GetAttributesWithMultipleParameters(context.GetSemanticModel(classSyntax.SyntaxTree), "Remote");
-								foreach (AttributeWithMultipleParameters attribute in attributes)
+								IEnumerable<AttributesWithMultipleParameters> attributes = classSyntax.GetAttributesWithMultipleParameters(context.GetSemanticModel(classSyntax.SyntaxTree), "Remote");
+								if (attributes != null && attributes.Any())
 								{
-									try
+									foreach (AttributesWithMultipleParameters attribute in attributes)
 									{
-										var idParameter = attribute.ParametersByName["Id"];
-										var nameParameter = attribute.ParametersByName["Name"];
-										var selfParameter = attribute.ParametersByName["Self"];
-										if (idParameter.Value != null && nameParameter.Value != null && selfParameter.Value != null)
+										try
 										{
-											bool isSelf = bool.Parse(selfParameter.Value);
-											if (isSelf)
+											continue;
+											if (attribute.ParametersByName.Count == 3)
 											{
-												methodBuilder.AppendLine("");
-												methodBuilder.AppendLine($"\t\t[Remote(Id = {idParameter.Value})]");
-												methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}(IDataReader reader, NetworkPeer peer);");
-											}
-											else
-											{
-												methodBuilder.AppendLine("");
-												methodBuilder.AppendLine($"\t\t[Remote(Id = {idParameter.Value})]");
-												methodBuilder.AppendLine($"\t\tprivate void _{Math.Abs(nameParameter.Value.GetHashCode())}(IDataReader reader, NetworkPeer peer)"); // Hide method!
-												methodBuilder.AppendLine("\t\t{");
-												methodBuilder.AppendLine($"\t\t\tif (IsServer) {nameParameter.Value}_Server(reader, peer);");
-												methodBuilder.AppendLine($"\t\t\telse {nameParameter.Value}_Client(reader, peer);");
-												methodBuilder.AppendLine("\t\t}");
-												// Server Method
-												methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}_Server(IDataReader reader, NetworkPeer peer);");
-												// Client Method
-												methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}_Client(IDataReader reader, NetworkPeer peer);");
-											}
+												var idParameter = attribute.ParametersByName["Id"]; // 1 required
+												var nameParameter = attribute.ParametersByName["Name"];  // 2 required
+												var selfParameter = attribute.ParametersByName["Self"]; //  3 required
+												if (idParameter.Value != null && nameParameter.Value != null && selfParameter.Value != null)
+												{
+													if (bool.TryParse(selfParameter.Value, out bool itSelf))
+													{
+														if (itSelf)
+														{
+															methodBuilder.AppendLine("");
+															methodBuilder.AppendLine($"\t\t[Remote(Id = {idParameter.Value})]");
+															methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}(IDataReader reader, NetworkPeer peer);");
+														}
+														else
+														{
+															methodBuilder.AppendLine("");
+															methodBuilder.AppendLine($"\t\t[Remote(Id = {idParameter.Value})]");
+															methodBuilder.AppendLine($"\t\tprivate void _{Math.Abs(nameParameter.Value.GetHashCode())}(IDataReader reader, NetworkPeer peer)"); // Hide method!
+															methodBuilder.AppendLine("\t\t{");
+															methodBuilder.AppendLine($"\t\t\tif (IsServer) {nameParameter.Value}_Server(reader, peer);");
+															methodBuilder.AppendLine($"\t\t\telse {nameParameter.Value}_Client(reader, peer);");
+															methodBuilder.AppendLine("\t\t}");
+															// Server Method
+															methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}_Server(IDataReader reader, NetworkPeer peer);");
+															// Client Method
+															methodBuilder.AppendLine($"\t\tpartial void {nameParameter.Value}_Client(IDataReader reader, NetworkPeer peer);");
+														}
 
-											methodBuilder.AppendLine($"\t\tprivate byte {nameParameter.Value}_Id => {idParameter.Value};");
-											// Send to Client
-											methodBuilder.AppendLine($"\t\tprivate void {nameParameter.Value}(IDataWriter writer, DataDeliveryMode dataDeliveryMode, int playerId, byte channel = 0)");
-											methodBuilder.AppendLine("\t\t{");
-											methodBuilder.AppendLine($"\t\t\tRpc(writer, dataDeliveryMode, playerId, {nameParameter.Value}_Id, channel);");
-											methodBuilder.AppendLine("\t\t}");
+														methodBuilder.AppendLine($"\t\tprivate byte {nameParameter.Value}_Id => {idParameter.Value};");
+														// Send to Client
+														methodBuilder.AppendLine($"\t\tprivate void {nameParameter.Value}(IDataWriter writer, DataDeliveryMode dataDeliveryMode, int playerId, byte channel = 0)");
+														methodBuilder.AppendLine("\t\t{");
+														methodBuilder.AppendLine($"\t\t\tRpc(writer, dataDeliveryMode, playerId, {nameParameter.Value}_Id, channel);");
+														methodBuilder.AppendLine("\t\t}");
 
-											// Send to Server
-											methodBuilder.AppendLine($"\t\tprivate void {nameParameter.Value}(IDataWriter writer, DataDeliveryMode dataDeliveryMode, byte channel = 0)");
-											methodBuilder.AppendLine("\t\t{");
-											methodBuilder.AppendLine($"\t\t\tRpc(writer, dataDeliveryMode, {nameParameter.Value}_Id, channel);");
-											methodBuilder.AppendLine("\t\t}");
+														// Send to Server
+														methodBuilder.AppendLine($"\t\tprivate void {nameParameter.Value}(IDataWriter writer, DataDeliveryMode dataDeliveryMode, byte channel = 0)");
+														methodBuilder.AppendLine("\t\t{");
+														methodBuilder.AppendLine($"\t\t\tRpc(writer, dataDeliveryMode, {nameParameter.Value}_Id, channel);");
+														methodBuilder.AppendLine("\t\t}");
+													}
+												}
+											}
 										}
-									}
-									catch
-									{
-										continue;
+										catch (Exception ex)
+										{
+											Helpers.Log("RpcGen", ex.ToString());
+											continue;
+										}
 									}
 								}
 								return methodBuilder.ToString();

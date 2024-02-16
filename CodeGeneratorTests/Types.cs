@@ -1,11 +1,15 @@
 ﻿using Omni.Core;
 using Programa.Zeth;
+using System.Text;
 
 namespace Azeth
 {
-	public class Player
+	public class Player : IEquatable<Player>
 	{
-
+		public bool Equals(Player? other)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
 
@@ -24,7 +28,8 @@ namespace Omni.Core
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
 	public class NetVar : Attribute
 	{
-
+		public bool SerializeAsJson { get; set; }
+		public bool VerifyIfEqual { get; set; }
 	}
 
 	public class NetworkBehaviour
@@ -45,7 +50,8 @@ namespace Omni.Core
 		protected virtual bool OnPropertyChanged(string netVarName, int id) => true;
 #pragma warning disable CA1822
 #pragma warning disable IDE1006
-		protected void ___2205032024<T>(T oldValue, T newValue, string type, string netVarName, int id, bool isPrimitiveType, bool isValueType, string typeKind) // called when 
+		protected virtual void ___2205032023(byte id, IDataReader dataReader) { throw new NotImplementedException("NetVar not implemented!"); } // Deserialize
+		protected void ___2205032024<T>(T oldValue, T newValue, string type, string netVarName, int id, bool isPrimitiveType, bool isValueType, string typeKind, bool serializeAsJson) // called when 
 #pragma warning restore IDE1006
 #pragma warning restore CA1822
 		{
@@ -62,8 +68,48 @@ namespace Omni.Core
 
 	}
 
-	public class IDataReader
+	public interface IDataReader
 	{
+		byte[] Buffer { get; }
+		int Position { get; set; }
+		int BytesWritten { get; set; }
+		bool ResetPositionAfterWriting { get; set; }
+		Encoding Encoding { get; set; }
+		void Clear();
+		void Write(byte[] buffer, int offset, int count);
+		void Write(Span<byte> value);
+		void Write(ReadOnlySpan<byte> value);
+		void Write(Stream value);
+		void Read(byte[] buffer, int offset, int count);
+		int Read(Span<byte> value);
+		T ReadCustomMessage<T>() where T : unmanaged, IComparable, IConvertible, IFormattable;
+		byte ReadByte();
+		short ReadShort();
+		int ReadInt();
+		long ReadLong();
+		double ReadDouble();
+		float ReadFloat();
+		decimal ReadDecimal();
+		sbyte ReadSByte();
+		ushort ReadUShort();
+		string ReadString();
+		string ReadStringWithoutAllocation();
+		void DeserializeWithCustom<T>(ISyncCustom ISyncCustom) where T : class;
+		T DeserializeWithJsonNet<T>(JsonSerializerSettings options = null);
+		T DeserializeWithMsgPack<T>(MessagePackSerializerOptions options = null);
+		uint ReadUInt();
+		ulong ReadULong();
+		bool ReadBool();
+		void ReadBool(out bool v1, out bool v2);
+		void ReadBool(out bool v1, out bool v2, out bool v3);
+		void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4);
+		void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5);
+		void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6);
+		void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6, out bool v7);
+		void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6, out bool v7, out bool v8);
+		int Read7BitEncodedInt();
+		long Read7BitEncodedInt64();
+		T Marshalling_ReadStructure<T>() where T : struct;
 
 	}
 

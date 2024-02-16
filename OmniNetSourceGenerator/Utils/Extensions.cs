@@ -3,13 +3,14 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace SourceGenerator.Utils
 {
 	internal class MemberInfo
 	{
-		internal MemberInfo(string name, string value, string typeName, bool isPrimitiveType, bool isValueType, TypeKind typeKind)
+		internal MemberInfo(string name, string value, string typeName, bool isPrimitiveType, bool isValueType, TypeKind typeKind, ImmutableArray<INamedTypeSymbol> interfaces)
 		{
 			Name = name;
 			Value = value;
@@ -17,17 +18,19 @@ namespace SourceGenerator.Utils
 			IsPrimitiveType = isPrimitiveType;
 			IsValueType = isValueType;
 			TypeKind = typeKind;
+			Interfaces = interfaces;
 		}
 
-		internal string Name { get; set; }
-		internal string Value { get; set; }
-		internal string TypeName { get; set; }
-		internal bool IsPrimitiveType { get; set; }
-		internal bool IsValueType { get; set; }
-		internal TypeKind TypeKind { get; set; }
+		internal string Name { get; }
+		internal string Value { get; }
+		internal string TypeName { get; }
+		internal bool IsPrimitiveType { get; }
+		internal bool IsValueType { get; }
+		internal TypeKind TypeKind { get; }
+		internal ImmutableArray<INamedTypeSymbol> Interfaces { get; }
 	}
 
-	internal class AttributeWithMultipleParameters
+	internal class AttributesWithMultipleParameters
 	{
 		internal class Parameter
 		{
@@ -43,6 +46,12 @@ namespace SourceGenerator.Utils
 			internal string TypeName { get; }
 		}
 
+		public AttributesWithMultipleParameters(string attributeName)
+		{
+			AttributeName = attributeName;
+		}
+
+		internal string AttributeName { get; }
 		internal List<Parameter> Parameters { get; } = new List<Parameter>();
 		internal Dictionary<string, Parameter> ParametersByName { get; } = new Dictionary<string, Parameter>();
 	}
@@ -169,7 +178,7 @@ namespace SourceGenerator.Utils
 			return node.Ancestors().OfType<TypeSyntax>().First();
 		}
 
-		public static MemberInfo GetFieldInfo(this VariableDeclaratorSyntax syntaxNode, SemanticModel semanticModel)
+		public static MemberInfo GetFieldInfo(this VariableDeclaratorSyntax syntaxNode, SemanticModel semanticModel, bool allInterfaces = false)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
@@ -177,10 +186,10 @@ namespace SourceGenerator.Utils
 			string identifierName = syntaxNode.Identifier.Text;
 			string initializerValue = equalsValueClauseSyntax == null ? "" : equalsValueClauseSyntax.Value is LiteralExpressionSyntax literalExpressionSyntax ? literalExpressionSyntax.Token.ValueText : equalsValueClauseSyntax.Value.ToString();
 			var typeSymbol = equalsValueClauseSyntax == null ? semanticModel.GetTypeInfo(GetDescendantTypeSyntax(syntaxNode.Parent)).ConvertedType : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType;
-			return new MemberInfo(identifierName, initializerValue, typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), typeSymbol.IsUnmanagedType, typeSymbol.IsValueType, typeSymbol.TypeKind);
+			return new MemberInfo(identifierName, initializerValue, typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), typeSymbol.IsUnmanagedType, typeSymbol.IsValueType, typeSymbol.TypeKind, allInterfaces ? typeSymbol.AllInterfaces : typeSymbol.Interfaces);
 		}
 
-		public static MemberInfo GetPropertyInfo(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel)
+		public static MemberInfo GetPropertyInfo(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel, bool allInterfaces = false)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
@@ -188,7 +197,7 @@ namespace SourceGenerator.Utils
 			string identifierName = syntaxNode.Identifier.Text;
 			string initializerValue = equalsValueClauseSyntax == null ? "" : equalsValueClauseSyntax.Value is LiteralExpressionSyntax literalExpressionSyntax ? literalExpressionSyntax.Token.ValueText : equalsValueClauseSyntax.Value.ToString();
 			var typeSymbol = equalsValueClauseSyntax == null ? semanticModel.GetTypeInfo(GetDescendantTypeSyntax(syntaxNode.Parent)).ConvertedType : semanticModel.GetTypeInfo(equalsValueClauseSyntax.Value).ConvertedType;
-			return new MemberInfo(identifierName, initializerValue, typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), typeSymbol.IsUnmanagedType, typeSymbol.IsValueType, typeSymbol.TypeKind);
+			return new MemberInfo(identifierName, initializerValue, typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), typeSymbol.IsUnmanagedType, typeSymbol.IsValueType, typeSymbol.TypeKind, allInterfaces ? typeSymbol.AllInterfaces : typeSymbol.Interfaces);
 		}
 
 		public static NamespaceDeclarationSyntax GetNamespaceDeclarationSyntax(this SyntaxNode syntaxNode)
@@ -312,7 +321,7 @@ namespace SourceGenerator.Utils
 			return Internal_HasAttribute(syntaxNode, attrName);
 		}
 
-		private static IEnumerable<AttributeWithMultipleParameters> Internal_GetAttributesWithMultipleParameters(this MemberDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
+		private static IEnumerable<AttributesWithMultipleParameters> Internal_GetAttributesWithMultipleParameters(this MemberDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
@@ -322,7 +331,7 @@ namespace SourceGenerator.Utils
 				{
 					if (attributeSyntax.Name is IdentifierNameSyntax identifierNameSyntax && identifierNameSyntax.Identifier.Text == attrName)
 					{
-						AttributeWithMultipleParameters attributeWithMultipleParameters = new AttributeWithMultipleParameters();
+						AttributesWithMultipleParameters attributeWithMultipleParameters = new AttributesWithMultipleParameters(attrName);
 						if (attributeSyntax.ArgumentList != null)
 						{
 							int pNameIndex = 0;
@@ -331,47 +340,47 @@ namespace SourceGenerator.Utils
 								string pName = attributeArgumentSyntax.NameColon?.Name.Identifier.Text ?? attributeArgumentSyntax.NameEquals?.Name.Identifier.Text ?? $"p{pNameIndex++}";
 								string pTypeName = semanticModel.GetTypeInfo(attributeArgumentSyntax.Expression).ConvertedType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
 								string pValue = attributeArgumentSyntax.Expression is LiteralExpressionSyntax literalExpressionSyntax ? literalExpressionSyntax.Token.ValueText : attributeArgumentSyntax.Expression.ToString();
-								attributeWithMultipleParameters.Parameters.Add(new AttributeWithMultipleParameters.Parameter(pName, pValue, pTypeName));
-								attributeWithMultipleParameters.ParametersByName.Add(pName, new AttributeWithMultipleParameters.Parameter(pName, pValue, pTypeName));
+								attributeWithMultipleParameters.Parameters.Add(new AttributesWithMultipleParameters.Parameter(pName, pValue, pTypeName));
+								attributeWithMultipleParameters.ParametersByName.Add(pName, new AttributesWithMultipleParameters.Parameter(pName, pValue, pTypeName));
 							}
+							yield return attributeWithMultipleParameters;
 						}
 						else continue;
-						yield return attributeWithMultipleParameters;
 					}
 					else continue;
 				}
 			}
 		}
 
-		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this ClassDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
+		public static IEnumerable<AttributesWithMultipleParameters> GetAttributesWithMultipleParameters(this ClassDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
 			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
 		}
 
-		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
+		public static IEnumerable<AttributesWithMultipleParameters> GetAttributesWithMultipleParameters(this PropertyDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
 			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
 		}
 
-		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this MemberDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
+		public static IEnumerable<AttributesWithMultipleParameters> GetAttributesWithMultipleParameters(this MemberDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
 			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
 		}
 
-		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this MethodDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
+		public static IEnumerable<AttributesWithMultipleParameters> GetAttributesWithMultipleParameters(this MethodDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);
 			return syntaxNode.Internal_GetAttributesWithMultipleParameters(semanticModel, attrName);
 		}
 
-		public static IEnumerable<AttributeWithMultipleParameters> GetAttributesWithMultipleParameters(this FieldDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
+		public static IEnumerable<AttributesWithMultipleParameters> GetAttributesWithMultipleParameters(this FieldDeclarationSyntax syntaxNode, SemanticModel semanticModel, string attrName)
 		{
 			ThrowAnErrorIfIsNull(syntaxNode);
 			ThrowAnErrorIfIsNull(semanticModel);

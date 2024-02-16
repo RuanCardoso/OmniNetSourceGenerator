@@ -60,15 +60,15 @@ namespace SourceGenerator.Utils
 
 		public static void Log(string name, string message, bool append = true)
 		{
-			using (StreamWriter writer = new StreamWriter(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "source_gen_log.txt"), append))
+			using (StreamWriter writer = new StreamWriter("_source_gen_log.txt", append))
 			{
-				writer.WriteLine($"{DateTime.Now} - {name} - {message}");
+				writer.WriteLine($"{DateTime.Now} - {name} - {message} [END]\n\n");
 			}
 		}
 
 		public static void DeleteLog()
 		{
-			File.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "source_gen_log.txt"));
+			File.Delete("_source_gen_log.txt");
 		}
 	}
 }

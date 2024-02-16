@@ -1,5 +1,6 @@
 ﻿using Azeth;
 using Omni.Core;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Programa.Zeth
 {
@@ -13,48 +14,74 @@ namespace Programa.Zeth
 
 	}
 
-	struct vv
+	struct vv : IEquatable<vv>, IEqualityComparer<vv>
 	{
-		string a;
-		//bb a2;
+		public bool Equals(vv other)
+		{
+			throw new NotImplementedException();
+		}
+
+		public bool Equals(vv x, vv y)
+		{
+			throw new NotImplementedException();
+		}
+
+		public int GetHashCode([DisallowNull] vv obj)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
+	class Equips : Dictionary<string, string>
+	{
+
 	}
 
 	[Remote(Id = 5, Name = "SyncRot", Self = true)]
-	[Remote(Id = 10, Name = "SyncMove", Self = true)]
+	[Remote(Id = 10, Name = "SyncMovee", Self = true)]
 	public partial class TesteClass : NetworkBehaviour
 	{
-		[NetVar]
-		private int teste = 100;
+		[NetVar(SerializeAsJson = true, VerifyIfEqual = true)]
+		private int test1be, ka2ba, as223 = 100;
 
 		[NetVar]
-		private string teste2 = "100";
+		private string tests21e2 = "100";
 
 		[NetVar]
-		private aa teste3 = aa.a;
+		private aa testbse23;
 
 		[NetVar]
-		private bb teste4 = new();
+		private bb tessd4;
 
 		[NetVar]
-		private vv teste5 = new();
+		private vv testeww221e5 = new();
 
 		[NetVar]
-		private Player teste6 = new();
+		private Player te2eee6 = new();
 
 		[NetVar]
-		private vv[] teste62 = new vv[1];
+		private vv[] testbve62;
 
 		[NetVar]
-		private Player[] teste162 = Array.Empty<Player>();
+		private Player[] tetesra162;
+
+		[NetVar(VerifyIfEqual = false)]
+		private List<vv> tesdfte32s621 = new();
+
+		[NetVar(SerializeAsJson = true)]
+		private List<Player> tessstes621;
 
 		[NetVar]
-		private List<vv> teste621 = new();
+		private List<Dictionary<int, Player>> tesaastea62a1 = new();
 
-		[NetVar]
-		private List<Player> testea621 = new();
+		[NetVar(SerializeAsJson = true)]
+		private Dictionary<int, Player> disati;
 
-		[NetVar]
-		private Dictionary<int, Player> testea62a1 = new();
+		[NetVar(VerifyIfEqual = true)]
+		private Equips di43ti20 = new();
+
+		[NetVar(SerializeAsJson = true)]
+		private HashSet<int> aa3s34d = new();
 
 		private static void Main()
 		{
@@ -65,11 +92,6 @@ namespace Programa.Zeth
 		{
 			Console.WriteLine(netVarName);
 			return true;
-		}
-
-		partial void SyncRot(IDataReader reader, NetworkPeer peer)
-		{
-			throw new NotImplementedException();
 		}
 
 		void Test()
