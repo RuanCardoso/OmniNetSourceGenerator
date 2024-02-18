@@ -1,102 +1,237 @@
-﻿using Azeth;
-using Omni.Core;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Text;
+using Teste;
 
-namespace Programa.Zeth
+namespace MessagePack
 {
-	enum aa
-	{
-		a
-	}
 
-	class bb
-	{
+}
 
-	}
+namespace Newtonsoft.Json
+{
 
-	struct vv : IEquatable<vv>, IEqualityComparer<vv>
+}
+
+namespace Teste
+{
+	[Remote(Self = false, Name = "Sync1", Id = 10)]
+	[Remote(Self = false, Name = "Sync2", Id = 5)]
+	public partial class Programa : NetworkBehaviour
 	{
-		public bool Equals(vv other)
+		[NetVar(SerializeAsJson = true)]
+		private float m_health, m_Ammo;
+
+		[NetVar]
+		private float mana;
+
+		[NetVar]
+		private Tipo1 tipo1;
+
+		[NetVar(SerializeAsJson = true)]
+		private Tipo2 tipo2;
+
+		[NetVar(SerializeAsJson = false)]
+		public Dictionary<int, object> m_Equips;
+
+		partial void Sync1_Client(IDataReader reader, NetworkPeer peer)
 		{
 			throw new NotImplementedException();
 		}
 
-		public bool Equals(vv x, vv y)
+		static void Main()
 		{
-			throw new NotImplementedException();
+			try
+			{
+				Console.WriteLine("Hello!");
+			}
+			catch (Exception) { }
 		}
 
-		public int GetHashCode([DisallowNull] vv obj)
+		void dd()
+		{
+		}
+
+	}
+
+	internal struct Tipo2
+	{
+	}
+
+	internal class Tipo1
+	{
+	}
+
+	internal class DataWriterPool
+	{
+		internal static IDataWriter Get()
 		{
 			throw new NotImplementedException();
 		}
 	}
 
-	class Equips : Dictionary<string, string>
+	public class NetworkBehaviour
+	{
+		// Sync NetVar with Roslyn Generators (:
+		// Roslyn methods!
+		protected virtual bool OnPropertyChanged(string netVarName, int id) => true;
+#pragma warning disable CA1822
+#pragma warning disable IDE1006
+		internal void Internal___2205032023(byte id, IDataReader dataReader) => ___2205032023(id, dataReader);
+		protected virtual void ___2205032023(byte id, IDataReader dataReader) { throw new NotImplementedException("NetVar not implemented!"); } // Deserialize
+
+		public bool IsServer;
+
+		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, byte rpcId, byte channel = 0)
+		{
+			
+		}
+
+		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, int playerId, byte rpcId, byte channel = 0)
+		{
+
+		}
+
+		protected void ___2205032024(IDataWriter writer, byte id) { }
+
+		internal IDataWriter GetWriter()
+		{
+			throw new NotImplementedException();
+		}
+
+		internal IDataReader GetReader()
+		{
+			throw new NotImplementedException();
+		}
+
+		internal void Release(IDataWriter writer)
+		{
+			throw new NotImplementedException();
+		}
+
+		internal void Release(IDataReader reader)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
+	public class MessagePackSerializer
+	{
+		public static MessagePackSerializerOptions DefaultOptions;
+	}
+
+	public class Network : NetworkBehaviour
 	{
 
 	}
+}
 
-	[Remote(Id = 5, Name = "SyncRot", Self = true)]
-	[Remote(Id = 10, Name = "SyncMovee", Self = true)]
-	public partial class TesteClass : NetworkBehaviour
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
+public class RemoteAttribute : Attribute
+{
+	public byte Id { get; set; }
+	public string Name { get; set; }
+	public bool Self { get; set; }
+}
+
+// Roslyn Generated //  Roslyn Analyzer
+[AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
+public class NetVarAttribute : Attribute
+{
+	public bool SerializeAsJson { get; set; }
+}
+
+public interface IDataWriter
+{
+	byte[] Buffer { get; }
+	int Position { get; }
+	int BytesWritten { get; }
+	Encoding Encoding { get; }
+	void Clear();
+	void Write<T>(T notSupported); // Roslyn NetVarTypes
+	void Write(byte[] buffer, int offset, int count);
+	void Write(Span<byte> value);
+	void Write(byte value);
+	void Write(short value);
+	void Write(int value);
+	void Write(long value);
+	void Write(double value);
+	void Write(float value);
+	void Write(decimal value);
+	void Write(sbyte value);
+	void Write(ushort value);
+	void Write(uint value);
+	void Write(ulong value);
+	void Write(string value);
+	void WriteWithoutAllocation(string value);
+	void SerializeWithCustom<T>(ISyncCustom ISyncCustom) where T : class;
+	void SerializeWithJsonNet<T>(T data, JsonSerializerSettings options);
+	void SerializeWithMsgPack<T>(T data, MessagePackSerializerOptions options);
+	void Write(bool value);
+	void Write(bool v1, bool v2);
+	void Write(bool v1, bool v2, bool v3);
+	void Write(bool v1, bool v2, bool v3, bool v4);
+	void Write(bool v1, bool v2, bool v3, bool v4, bool v5);
+	void Write(bool v1, bool v2, bool v3, bool v4, bool v5, bool v6);
+	void Write(bool v1, bool v2, bool v3, bool v4, bool v5, bool v6, bool v7);
+	void Write(bool v1, bool v2, bool v3, bool v4, bool v5, bool v6, bool v7, bool v8);
+	void Write7BitEncodedInt(int value);
+	void Write7BitEncodedInt64(long value);
+	void Marshalling_Write<T>(T structure) where T : struct;
+
+}
+public interface IDataReader
+{
+	byte[] Buffer { get; }
+	int Position { get; }
+	int BytesWritten { get; }
+	Encoding Encoding { get; }
+	void Recycle();
+	void Write(byte[] buffer, int offset, int count);
+	void Read(byte[] buffer, int offset, int count);
+	int Read(Span<byte> value);
+	T ReadCustomMessage<T>() where T : unmanaged, IComparable, IConvertible, IFormattable;
+	byte ReadByte();
+	short ReadShort();
+	int ReadInt();
+	long ReadLong();
+	double ReadDouble();
+	float ReadFloat();
+	decimal ReadDecimal();
+	sbyte ReadSByte();
+	ushort ReadUShort();
+	string ReadString();
+	string ReadStringWithoutAllocation();
+	void DeserializeWithCustom<T>(ISyncCustom ISyncCustom) where T : class;
+	T DeserializeWithJsonNet<T>(JsonSerializerSettings options);
+	T DeserializeWithMsgPack<T>(MessagePackSerializerOptions options);
+	uint ReadUInt();
+	ulong ReadULong();
+	bool ReadBool();
+	void ReadBool(out bool v1, out bool v2);
+	void ReadBool(out bool v1, out bool v2, out bool v3);
+	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4);
+	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5);
+	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6);
+	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6, out bool v7);
+	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6, out bool v7, out bool v8);
+	int Read7BitEncodedInt();
+	long Read7BitEncodedInt64();
+	T Marshalling_ReadStructure<T>() where T : struct;
+
+}
+
+public interface NetworkPeer { }
+public class DataDeliveryMode
+{
+}
+
+[Remote(Self = false, Name = "Sync3", Id = 10)]
+[Remote(Self = false, Name = "Sync4", Id = 5)]
+public partial class RpcTestes : NetworkBehaviour
+{
+	[NetVar(SerializeAsJson = true)]
+	private float m_health, m_Ammo;
+	void dd()
 	{
-		[NetVar(SerializeAsJson = true, VerifyIfEqual = true)]
-		private int test1be, ka2ba, as223 = 100;
 
-		[NetVar]
-		private string tests21e2 = "100";
-
-		[NetVar]
-		private aa testbse23;
-
-		[NetVar]
-		private bb tessd4;
-
-		[NetVar]
-		private vv testeww221e5 = new();
-
-		[NetVar]
-		private Player te2eee6 = new();
-
-		[NetVar]
-		private vv[] testbve62;
-
-		[NetVar]
-		private Player[] tetesra162;
-
-		[NetVar(VerifyIfEqual = false)]
-		private List<vv> tesdfte32s621 = new();
-
-		[NetVar(SerializeAsJson = true)]
-		private List<Player> tessstes621;
-
-		[NetVar]
-		private List<Dictionary<int, Player>> tesaastea62a1 = new();
-
-		[NetVar(SerializeAsJson = true)]
-		private Dictionary<int, Player> disati;
-
-		[NetVar(VerifyIfEqual = true)]
-		private Equips di43ti20 = new();
-
-		[NetVar(SerializeAsJson = true)]
-		private HashSet<int> aa3s34d = new();
-
-		private static void Main()
-		{
-
-		}
-
-		protected override bool OnPropertyChanged(string netVarName, int id)
-		{
-			Console.WriteLine(netVarName);
-			return true;
-		}
-
-		void Test()
-		{
-
-		}
 	}
 }

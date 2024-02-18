@@ -1,6 +1,3 @@
-﻿namespace Omni.Core
+﻿public class MessagePackSerializerOptions
 {
-	public class MessagePackSerializerOptions
-	{
-	}
 }

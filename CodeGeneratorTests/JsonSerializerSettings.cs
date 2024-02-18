@@ -1,6 +1,3 @@
-﻿namespace Omni.Core
+﻿public class JsonSerializerSettings
 {
-	public class JsonSerializerSettings
-	{
-	}
 }

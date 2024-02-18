@@ -28,3 +28,93 @@
    em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
 
 
+16/02/2024 04:03:06 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:03:06 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:03:18 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:03:19 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:03:23 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:03:23 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:08:47 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:08:47 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:09:00 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
+16/02/2024 04:09:01 - RpcGen - System.NullReferenceException: Referência de objeto não definida para uma instância de um objeto.
+   em SourceGenerator.Utils.Extensions.<Internal_GetAttributesWithMultipleParameters>d__31.MoveNext()
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_1.<Execute>b__2()
+   em SourceGenerator.Utils.Helpers.CreateClass(String modifier, String classname, String baseclassname, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.<>c__DisplayClass0_2.<Execute>b__1()
+   em SourceGenerator.Utils.Helpers.CreateNamespace(String namespacename, IEnumerable`1 usings, Func`1 OnCreated)
+   em SourceGenerator.Generators.RpcGenerator.Execute(GeneratorExecutionContext context) [END]
+
+
