@@ -17,19 +17,52 @@ namespace Teste
 	[Remote(Self = false, Name = "Sync2", Id = 5)]
 	public partial class Programa : NetworkBehaviour
 	{
-		[NetVar(SerializeAsJson = true)]
-		private float m_health, m_Ammo;
+		[NetVar]
+		protected int m_IntNetVar;
 
 		[NetVar]
-		private float mana;
+		protected float m_FloatNetVar;
+
+		[NetVar]
+		protected double m_DoubleNetVar;
+
+		[NetVar]
+		protected decimal m_DecimalNetVar;
+
+		[NetVar]
+		protected bool m_BoolNetVar;
+
+		[NetVar]
+		protected char m_CharNetVar;
+
+		[NetVar]
+		protected byte m_ByteNetVar;
+
+		[NetVar]
+		protected sbyte m_SByteNetVar;
+
+		[NetVar]
+		protected short m_ShortNetVar;
+
+		[NetVar]
+		protected ushort m_UShortNetVar;
+
+		[NetVar]
+		protected uint m_UIntNetVar;
+
+		[NetVar]
+		protected long m_LongNetVar;
+
+		[NetVar]
+		protected ulong m_ULongNetVar;
 
 		[NetVar]
 		private Tipo1 tipo1;
 
-		[NetVar(SerializeAsJson = true)]
+		[NetVar(SerializeAsJson = false, CustomSerializeAndDeserialize = true)]
 		private Tipo2 tipo2;
 
-		[NetVar(SerializeAsJson = false)]
+		[NetVar(SerializeAsJson = true, CustomSerializeAndDeserialize = true)]
 		public Dictionary<int, object> m_Equips;
 
 		partial void Sync1_Client(IDataReader reader, NetworkPeer peer)
@@ -82,10 +115,20 @@ namespace Teste
 
 		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, byte rpcId, byte channel = 0)
 		{
-			
+
 		}
 
 		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, int playerId, byte rpcId, byte channel = 0)
+		{
+
+		}
+
+		protected virtual void OnCustomSerialize(byte id, IDataWriter writer)
+		{
+
+		}
+
+		protected virtual void OnCustomDeserialize(byte id, IDataReader reader)
 		{
 
 		}
@@ -137,6 +180,7 @@ public class RemoteAttribute : Attribute
 public class NetVarAttribute : Attribute
 {
 	public bool SerializeAsJson { get; set; }
+	public bool CustomSerializeAndDeserialize { get; set; }
 }
 
 public interface IDataWriter
@@ -149,6 +193,7 @@ public interface IDataWriter
 	void Write<T>(T notSupported); // Roslyn NetVarTypes
 	void Write(byte[] buffer, int offset, int count);
 	void Write(Span<byte> value);
+	void Write(char value);
 	void Write(byte value);
 	void Write(short value);
 	void Write(int value);
@@ -189,6 +234,7 @@ public interface IDataReader
 	void Read(byte[] buffer, int offset, int count);
 	int Read(Span<byte> value);
 	T ReadCustomMessage<T>() where T : unmanaged, IComparable, IConvertible, IFormattable;
+	char ReadChar();
 	byte ReadByte();
 	short ReadShort();
 	int ReadInt();
