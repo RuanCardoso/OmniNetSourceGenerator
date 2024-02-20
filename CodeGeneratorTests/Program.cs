@@ -51,7 +51,13 @@ namespace Teste
 		protected uint m_UIntNetVar;
 
 		[NetVar]
-		protected long m_LongNetVar;
+		protected long m_LongNetVar;		
+		
+		[NetVar(SerializeAsJson = false)]
+		private Action<int, int, Tipo1> OnEnteredPlayer;
+
+		[NetVar(SerializeAsJson = true)]
+		private Action<int, int, Tipo1> OnEnteredPlayer2;
 
 		[NetVar]
 		protected ulong m_ULongNetVar;
@@ -64,6 +70,8 @@ namespace Teste
 
 		[NetVar(SerializeAsJson = true, CustomSerializeAndDeserialize = true)]
 		public Dictionary<int, object> m_Equips;
+
+
 
 		partial void Sync1_Client(IDataReader reader, NetworkPeer peer)
 		{
@@ -81,6 +89,7 @@ namespace Teste
 
 		void dd()
 		{
+
 		}
 
 	}
@@ -123,12 +132,12 @@ namespace Teste
 
 		}
 
-		protected virtual void OnCustomSerialize(byte id, IDataWriter writer)
+		protected virtual void OnCustomSerialize(byte id, IDataWriter writer, int argIndex = 0) // argIndex to delegates
 		{
 
 		}
 
-		protected virtual void OnCustomDeserialize(byte id, IDataReader reader)
+		protected virtual void OnCustomDeserialize(byte id, IDataReader reader, int argIndex = 0) // argIndex to delegates
 		{
 
 		}

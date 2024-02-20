@@ -26,7 +26,7 @@ namespace OmniNetSourceGenerator
 			{ "ushort", "ReadUShort" },
 			{ "uint", "ReadUInt" },
 			{ "long", "ReadLong" },
-			{ "ulong", "ReadULong" }
+			{ "ulong", "ReadULong" },
 		}; // Unsupported types are serialized using msgpack or json.
 
 		public void Execute(GeneratorExecutionContext context)
@@ -60,7 +60,7 @@ namespace OmniNetSourceGenerator
 										WithModifiers(originalClassDeclarationSyntax.Modifiers).WithBaseList(originalClassDeclarationSyntax.BaseList);
 
 									// Deserialize Func switch case
-									List<SwitchSectionSyntax> statementSyntaxes = new List<SwitchSectionSyntax>();
+									List<SwitchSectionSyntax> switchStatementSyntaxes = new List<SwitchSectionSyntax>();
 									MethodDeclarationSyntax DeserializeDeclarationSyntax() => SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), "___2205032023")
 										.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword), SyntaxFactory.Token(SyntaxKind.OverrideKeyword)))
 										.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[] {
@@ -68,7 +68,7 @@ namespace OmniNetSourceGenerator
 											SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataReader dataReader"))
 										}))).WithBody(SyntaxFactory.Block(SyntaxFactory.SwitchStatement(
 									  SyntaxFactory.ParseExpression("id"),
-									  SyntaxFactory.List(statementSyntaxes)
+									  SyntaxFactory.List(switchStatementSyntaxes)
 									)));
 
 									int netVarId = 0;
@@ -77,20 +77,26 @@ namespace OmniNetSourceGenerator
 										var variables = fieldDeclarationSyntax.Declaration.Variables;
 										foreach (var variable in variables)
 										{
-											string fieldName = variable.Identifier.ValueText;
-											if (fieldName.Contains("M_") || char.IsUpper(fieldName[0]))
-											{
-												context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CB005", "Omni", "NetVar fields must always begin with the first lowercase letter.", "", DiagnosticSeverity.Error, true), Location.None));
-												continue;
-											}
-
-											netVarId++;
-											if (netVarId > byte.MaxValue)
-												continue;
-
 											// Symbol Info/Type Info
 											TypeSyntax declarationType = fieldDeclarationSyntax.Declaration.Type;
 											TypeInfo typeInfo = semanticModel.GetTypeInfo(declarationType);
+
+											// Check Naming Convetion and Type
+											bool isDelegate = typeInfo.ConvertedType.TypeKind == TypeKind.Delegate;
+											string fieldName = variable.Identifier.ValueText;
+											if (!isDelegate)
+											{
+												if (fieldName.Contains("M_") || char.IsUpper(fieldName[0]))
+												{
+													context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CB005", "Omni", "NetVar fields must always begin with the first lowercase letter.", "", DiagnosticSeverity.Error, true), Location.None));
+													continue;
+												}
+											}
+
+											// Create a unique id for each field
+											netVarId++;
+											if (netVarId > byte.MaxValue)
+												continue;
 
 											// Json/Custom serialize?
 											bool serializeAsJson = false;
@@ -136,12 +142,16 @@ namespace OmniNetSourceGenerator
 												})
 											)).WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
 											.WithInitializer(SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseName(serializeAsJson ? "new();" : "MessagePackSerializer.DefaultOptions;")));
-											// Make the property
-											var property = SyntaxFactory.PropertyDeclaration(declarationType, propertyName)
-											.WithModifiers(fieldDeclarationSyntax.Modifiers).WithAccessorList(
-											SyntaxFactory.AccessorList(
-											SyntaxFactory.List(new[]
+											// Make the property or Delegate event!
+											PropertyDeclarationSyntax propertyToSyncDeclarationSyntax = null;
+											MethodDeclarationSyntax methodDelegateSyncDeclarationSyntax = null;
+											if (!isDelegate)
 											{
+												propertyToSyncDeclarationSyntax = SyntaxFactory.PropertyDeclaration(declarationType, propertyName)
+												.WithModifiers(fieldDeclarationSyntax.Modifiers).WithAccessorList(
+												SyntaxFactory.AccessorList(
+												SyntaxFactory.List(new[]
+												{
 											   SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
 												 .WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"return {fieldName};"))),
 											   SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
@@ -151,19 +161,76 @@ namespace OmniNetSourceGenerator
 													 !customSerializeAndDeserialize ? SyntaxFactory.ParseStatement(m_NetVarSupportedTypes.ContainsKey(declarationType.ToString()) ? $"writer.Write({fieldName});" : $"{(serializeAsJson ? $"writer.SerializeWithJsonNet({fieldName}, {serializerSettingsSyntax.Identifier.ValueText});" : $"writer.SerializeWithMsgPack({fieldName}, {serializerSettingsSyntax.Identifier.ValueText});")}") : SyntaxFactory.ParseStatement($"OnCustomSerialize({netVarId}, writer);"),
 													 SyntaxFactory.ParseStatement($"___2205032024(writer, {netVarId});"),
 													 SyntaxFactory.ParseStatement("Release(writer);")
-												 )).WithTrailingTrivia(SyntaxFactory.Comment($"// IsUnmanagedType: {typeInfo.ConvertedType.IsUnmanagedType} | Type: {declarationType} | SerializeAsJson: {serializeAsJson} | CustomSerializeAndDeserialize: {customSerializeAndDeserialize}")),
-											})));
+												 )).WithTrailingTrivia(SyntaxFactory.Comment($"// IsUnmanagedType: {typeInfo.ConvertedType.IsUnmanagedType} | Type: {declarationType} | SerializeAsJson: {serializeAsJson} | CustomSerializeAndDeserialize: {customSerializeAndDeserialize} | Kind: {typeInfo.ConvertedType.TypeKind}")),
+												})));
 
-											statementSyntaxes.Add(SyntaxFactory.SwitchSection(
-											SyntaxFactory.List(new SwitchLabelSyntax[] {
-												SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(netVarId.ToString()))
-											}),
-											SyntaxFactory.List(new StatementSyntax[] {
-												SyntaxFactory.Block(
-												 !customSerializeAndDeserialize ? SyntaxFactory.ParseStatement(m_NetVarSupportedTypes.ContainsKey(declarationType.ToString()) ? $"{fieldName} = dataReader.{m_NetVarSupportedTypes[declarationType.ToString()]}();" : $"{(serializeAsJson ? $"{fieldName} = dataReader.DeserializeWithJsonNet<{declarationType}>({serializerSettingsSyntax.Identifier.ValueText});" : $"{fieldName} = dataReader.DeserializeWithMsgPack<{declarationType}>({serializerSettingsSyntax.Identifier.ValueText});")}") : SyntaxFactory.ParseStatement($"OnCustomDeserialize({netVarId}, dataReader);"),
-												SyntaxFactory.BreakStatement())
-											})));
+												// Make switch case for deserialization method!
+												switchStatementSyntaxes.Add(SyntaxFactory.SwitchSection(
+												  SyntaxFactory.List(new SwitchLabelSyntax[] {
+												  SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(netVarId.ToString()))
+												 }),
+												  SyntaxFactory.List(new StatementSyntax[] {
+												  SyntaxFactory.Block(
+												  !customSerializeAndDeserialize ? SyntaxFactory.ParseStatement(m_NetVarSupportedTypes.ContainsKey(declarationType.ToString()) ? $"{fieldName} = dataReader.{m_NetVarSupportedTypes[declarationType.ToString()]}();" : $"{(serializeAsJson ? $"{fieldName} = dataReader.DeserializeWithJsonNet<{declarationType}>({serializerSettingsSyntax.Identifier.ValueText});" : $"{fieldName} = dataReader.DeserializeWithMsgPack<{declarationType}>({serializerSettingsSyntax.Identifier.ValueText});")}") : SyntaxFactory.ParseStatement($"OnCustomDeserialize({netVarId}, dataReader);"),
+												  SyntaxFactory.BreakStatement())
+												})));
+											}
+											else
+											{
+												// Delegate
+												bool hasReturnType = !((INamedTypeSymbol)typeInfo.ConvertedType).DelegateInvokeMethod.ReturnsVoid;
+												if (hasReturnType)
+												{
+													context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CB008", "Omni", "Delegates with return types are not supported. Please ensure the delegate type does not have a return type.", "", DiagnosticSeverity.Error, true), Location.None));
+													return;
+												}
 
+												if (declarationType is GenericNameSyntax genericNameSyntax)
+												{
+													List<ParameterSyntax> parameterSyntaxes = new List<ParameterSyntax>();
+													List<StatementSyntax> serializeStatementSyntaxes = new List<StatementSyntax>();
+													List<StatementSyntax> deserializeStatementSyntaxes = new List<StatementSyntax>();
+													for (int i = 0; i < genericNameSyntax.TypeArgumentList.Arguments.Count; i++)
+													{
+														TypeSyntax type = genericNameSyntax.TypeArgumentList.Arguments[i];
+														parameterSyntaxes.Add(SyntaxFactory.Parameter(SyntaxFactory.Identifier($"{type} p{i}")));
+													}
+
+													// Call action
+													serializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"{fieldName}({string.Join(",", parameterSyntaxes.Select((syntax, index) => $"p{index}"))});").WithLeadingTrivia(SyntaxFactory.Comment("// Call delegate before send!")));
+													// Sync actions arguments to network
+													serializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"IDataWriter writer = GetWriter();").WithLeadingTrivia(SyntaxFactory.Comment("// Let's serialize the data and send it to the network.")));
+													for (int i = 0; i < genericNameSyntax.TypeArgumentList.Arguments.Count; i++)
+													{
+														TypeSyntax type = genericNameSyntax.TypeArgumentList.Arguments[i];
+														serializeStatementSyntaxes.Add(!customSerializeAndDeserialize ? SyntaxFactory.ParseStatement(m_NetVarSupportedTypes.ContainsKey(type.ToString()) ? $"writer.Write(p{i});" : $"{(serializeAsJson ? $"writer.SerializeWithJsonNet(p{i}, {serializerSettingsSyntax.Identifier.ValueText});" : $"writer.SerializeWithMsgPack(p{i}, {serializerSettingsSyntax.Identifier.ValueText});")}") : SyntaxFactory.ParseStatement($"OnCustomSerialize({netVarId}, writer, {i});"));
+														deserializeStatementSyntaxes.Add(!customSerializeAndDeserialize ? SyntaxFactory.ParseStatement(m_NetVarSupportedTypes.ContainsKey(type.ToString()) ? $"{type} p{i} = dataReader.{m_NetVarSupportedTypes[type.ToString()]}();" : $"{(serializeAsJson ? $"{type} p{i} = dataReader.DeserializeWithJsonNet<{type}>({serializerSettingsSyntax.Identifier.ValueText});" : $"{type} p{i} = dataReader.DeserializeWithMsgPack<{type}>({serializerSettingsSyntax.Identifier.ValueText});")}") : SyntaxFactory.ParseStatement($"OnCustomDeserialize({netVarId}, dataReader, {i});"));
+													}
+													// Deserialize Statements
+													if (!customSerializeAndDeserialize) deserializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"{fieldName}({string.Join(",", parameterSyntaxes.Select((syntax, index) => $"p{index}"))});"));
+													deserializeStatementSyntaxes.Add(SyntaxFactory.BreakStatement());
+													// Serialize Statements
+													serializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"___2205032024(writer, {netVarId});"));
+													serializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement("Release(writer);"));
+
+													// Make switch case for deserialization method!
+													switchStatementSyntaxes.Add(SyntaxFactory.SwitchSection(
+													   SyntaxFactory.List(new SwitchLabelSyntax[] {
+													   SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(netVarId.ToString()))
+													 }), SyntaxFactory.List(new StatementSyntax[] { SyntaxFactory.Block(deserializeStatementSyntaxes) })));
+
+													methodDelegateSyncDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{propertyName}Invoke")
+													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+													.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(parameterSyntaxes)))
+													.WithBody(SyntaxFactory.Block(serializeStatementSyntaxes));
+												}
+												else if (declarationType is IdentifierNameSyntax identifierNameSyntax) // Without parameters
+												{
+													methodDelegateSyncDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{propertyName}Invoke")
+													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+													.WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"")));
+												}
+											}
 
 											// Id Property
 											PropertyDeclarationSyntax idPropertySyntax = SyntaxFactory.PropertyDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.ByteKeyword)), $"{propertyName}Id").WithAccessorList(
@@ -177,7 +244,9 @@ namespace OmniNetSourceGenerator
 											.WithInitializer(SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseName($"{netVarId};")));
 
 											// Add property!
-											newClassDeclarationSyntax = newClassDeclarationSyntax.AddMembers(idPropertySyntax, serializerSettingsSyntax.WithLeadingTrivia(SyntaxFactory.Comment("\n")), property.WithLeadingTrivia(SyntaxFactory.Comment("\n")));
+											newClassDeclarationSyntax = !isDelegate
+												? newClassDeclarationSyntax.AddMembers(idPropertySyntax, serializerSettingsSyntax.WithLeadingTrivia(SyntaxFactory.Comment("\n")), propertyToSyncDeclarationSyntax.WithLeadingTrivia(SyntaxFactory.Comment("\n")))
+												: newClassDeclarationSyntax.AddMembers(idPropertySyntax, serializerSettingsSyntax.WithLeadingTrivia(SyntaxFactory.Comment("\n")), methodDelegateSyncDeclarationSyntax.WithLeadingTrivia(SyntaxFactory.Comment("\n")));
 										}
 									}
 
