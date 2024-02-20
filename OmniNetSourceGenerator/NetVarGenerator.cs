@@ -182,7 +182,7 @@ namespace OmniNetSourceGenerator
 												if (hasReturnType)
 												{
 													context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CB008", "Omni", "Delegates with return types are not supported. Please ensure the delegate type does not have a return type.", "", DiagnosticSeverity.Error, true), Location.None));
-													return;
+													continue;
 												}
 
 												if (declarationType is GenericNameSyntax genericNameSyntax)
