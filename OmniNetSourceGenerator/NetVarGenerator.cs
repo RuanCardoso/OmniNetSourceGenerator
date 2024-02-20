@@ -228,7 +228,21 @@ namespace OmniNetSourceGenerator
 												{
 													methodDelegateSyncDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{propertyName}Invoke")
 													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
-													.WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"")));
+													.WithBody(SyntaxFactory.Block(
+														SyntaxFactory.ParseStatement($"IDataWriter writer = DataWriter.Empty;"),
+														SyntaxFactory.ParseStatement($"___2205032024(writer, {netVarId});"),
+														SyntaxFactory.ParseStatement("Release(writer);")
+														));
+
+													// Make switch case for deserialization method!
+													switchStatementSyntaxes.Add(SyntaxFactory.SwitchSection(
+													  SyntaxFactory.List(new SwitchLabelSyntax[] {
+													  SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(netVarId.ToString()))
+													 }),
+													  SyntaxFactory.List(new StatementSyntax[] {
+													  SyntaxFactory.Block(SyntaxFactory.ParseStatement($"{fieldName}();"),
+													  SyntaxFactory.BreakStatement())
+													})));
 												}
 											}
 

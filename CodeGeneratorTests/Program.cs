@@ -52,12 +52,6 @@ namespace Teste
 
 		[NetVar]
 		protected long m_LongNetVar;		
-		
-		[NetVar(SerializeAsJson = false)]
-		private Action<int, int, Tipo1> OnEnteredPlayer;
-
-		[NetVar(SerializeAsJson = true)]
-		private Action<int, int, Tipo1> OnEnteredPlayer2;
 
 		[NetVar]
 		protected ulong m_ULongNetVar;
@@ -72,6 +66,11 @@ namespace Teste
 		public Dictionary<int, object> m_Equips;
 
 
+		[NetVar(SerializeAsJson = false)]
+		private Action<Tipo2> OnEnteredPlayer;
+
+		[NetVar(SerializeAsJson = true)]
+		private Action OnEnteredPlayer2;
 
 		partial void Sync1_Client(IDataReader reader, NetworkPeer peer)
 		{
@@ -92,6 +91,179 @@ namespace Teste
 
 		}
 
+	}
+
+	public class DataWriter : IDataWriter
+	{
+		public static DataWriter Empty;
+
+		public byte[] Buffer => throw new NotImplementedException();
+
+		public int Position => throw new NotImplementedException();
+
+		public int BytesWritten => throw new NotImplementedException();
+
+		public Encoding Encoding => throw new NotImplementedException();
+
+		public void Clear()
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Marshalling_Write<T>(T structure) where T : struct
+		{
+			throw new NotImplementedException();
+		}
+
+		public void SerializeWithCustom<T>(ISyncCustom ISyncCustom) where T : class
+		{
+			throw new NotImplementedException();
+		}
+
+		public void SerializeWithJsonNet<T>(T data, JsonSerializerSettings options)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void SerializeWithMsgPack<T>(T data, MessagePackSerializerOptions options)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write<T>(T notSupported)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(byte[] buffer, int offset, int count)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(Span<byte> value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(char value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(byte value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(short value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(int value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(long value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(double value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(float value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(decimal value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(sbyte value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(ushort value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(uint value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(ulong value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(string value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(bool value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(bool v1, bool v2)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(bool v1, bool v2, bool v3)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(bool v1, bool v2, bool v3, bool v4)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(bool v1, bool v2, bool v3, bool v4, bool v5)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(bool v1, bool v2, bool v3, bool v4, bool v5, bool v6)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(bool v1, bool v2, bool v3, bool v4, bool v5, bool v6, bool v7)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(bool v1, bool v2, bool v3, bool v4, bool v5, bool v6, bool v7, bool v8)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write7BitEncodedInt(int value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write7BitEncodedInt64(long value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void WriteWithoutAllocation(string value)
+		{
+			throw new NotImplementedException();
+		}
 	}
 
 	internal struct Tipo2
@@ -285,6 +457,9 @@ public partial class RpcTestes : NetworkBehaviour
 {
 	[NetVar(SerializeAsJson = true)]
 	private float m_health, m_Ammo;
+
+	[NetVar(SerializeAsJson = true)]
+	private Action OnCreated;
 	void dd()
 	{
 
