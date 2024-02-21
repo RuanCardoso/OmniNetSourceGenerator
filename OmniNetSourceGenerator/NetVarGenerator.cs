@@ -197,7 +197,7 @@ namespace OmniNetSourceGenerator
 													}
 
 													// Call action
-													serializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"{fieldName}({string.Join(",", parameterSyntaxes.Select((syntax, index) => $"p{index}"))});").WithLeadingTrivia(SyntaxFactory.Comment("// Call delegate before send!")));
+													serializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"{fieldName}?.Invoke({string.Join(",", parameterSyntaxes.Select((syntax, index) => $"p{index}"))});").WithLeadingTrivia(SyntaxFactory.Comment("// Call delegate before send!")));
 													// Sync actions arguments to network
 													serializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"IDataWriter writer = GetWriter();").WithLeadingTrivia(SyntaxFactory.Comment("// Let's serialize the data and send it to the network.")));
 													for (int i = 0; i < genericNameSyntax.TypeArgumentList.Arguments.Count; i++)
@@ -207,7 +207,7 @@ namespace OmniNetSourceGenerator
 														deserializeStatementSyntaxes.Add(!customSerializeAndDeserialize ? SyntaxFactory.ParseStatement(m_NetVarSupportedTypes.ContainsKey(type.ToString()) ? $"{type} p{i} = dataReader.{m_NetVarSupportedTypes[type.ToString()]}();" : $"{(serializeAsJson ? $"{type} p{i} = dataReader.DeserializeWithJsonNet<{type}>({serializerSettingsSyntax.Identifier.ValueText});" : $"{type} p{i} = dataReader.DeserializeWithMsgPack<{type}>({serializerSettingsSyntax.Identifier.ValueText});")}") : SyntaxFactory.ParseStatement($"OnCustomDeserialize({netVarId}, dataReader, {i});"));
 													}
 													// Deserialize Statements
-													if (!customSerializeAndDeserialize) deserializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"{fieldName}({string.Join(",", parameterSyntaxes.Select((syntax, index) => $"p{index}"))});"));
+													if (!customSerializeAndDeserialize) deserializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"{fieldName}?.Invoke({string.Join(",", parameterSyntaxes.Select((syntax, index) => $"p{index}"))});"));
 													deserializeStatementSyntaxes.Add(SyntaxFactory.BreakStatement());
 													// Serialize Statements
 													serializeStatementSyntaxes.Add(SyntaxFactory.ParseStatement($"___2205032024(writer, {netVarId});"));
@@ -226,12 +226,14 @@ namespace OmniNetSourceGenerator
 												}
 												else if (declarationType is IdentifierNameSyntax identifierNameSyntax) // Without parameters
 												{
+													// Without parameters
 													methodDelegateSyncDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{propertyName}Invoke")
 													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
 													.WithBody(SyntaxFactory.Block(
+														SyntaxFactory.ParseStatement($"{fieldName}?.Invoke();"),
 														SyntaxFactory.ParseStatement($"IDataWriter writer = DataWriter.Empty;"),
 														SyntaxFactory.ParseStatement($"___2205032024(writer, {netVarId});"),
-														SyntaxFactory.ParseStatement("Release(writer);")
+														SyntaxFactory.ParseStatement("writer.Clear();")
 														));
 
 													// Make switch case for deserialization method!
@@ -240,7 +242,7 @@ namespace OmniNetSourceGenerator
 													  SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(netVarId.ToString()))
 													 }),
 													  SyntaxFactory.List(new StatementSyntax[] {
-													  SyntaxFactory.Block(SyntaxFactory.ParseStatement($"{fieldName}();"),
+													  SyntaxFactory.Block(SyntaxFactory.ParseStatement($"{fieldName}?.Invoke();"),
 													  SyntaxFactory.BreakStatement())
 													})));
 												}

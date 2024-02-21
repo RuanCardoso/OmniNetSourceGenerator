@@ -59,17 +59,16 @@ namespace Teste
 		[NetVar]
 		private Tipo1 tipo1;
 
-		[NetVar(SerializeAsJson = false, CustomSerializeAndDeserialize = true)]
+		[NetVar(SerializeAsJson = false, CustomSerializeAndDeserialize = false)]
 		private Tipo2 tipo2;
 
 		[NetVar(SerializeAsJson = true, CustomSerializeAndDeserialize = true)]
 		public Dictionary<int, object> m_Equips;
 
-
-		[NetVar(SerializeAsJson = false)]
+		[NetVar(SerializeAsJson = false, CustomSerializeAndDeserialize = false)]
 		private Action<Tipo2> OnEnteredPlayer;
 
-		[NetVar(SerializeAsJson = true)]
+		[NetVar(SerializeAsJson = true, CustomSerializeAndDeserialize = false)]
 		private Action OnEnteredPlayer2;
 
 		partial void Sync1_Client(IDataReader reader, NetworkPeer peer)
