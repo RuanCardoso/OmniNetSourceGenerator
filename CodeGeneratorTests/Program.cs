@@ -11,6 +11,26 @@ namespace Newtonsoft.Json
 
 }
 
+public enum DataTarget : byte
+{
+	/// <summary>
+	/// Only the server will receive the data.
+	/// </summary>
+	Server = 0,
+	/// <summary>
+	/// All clients will receive the data.
+	/// </summary>
+	Broadcast = 1,
+	/// <summary>
+	/// All clients will receive the data, except the sender.
+	/// </summary>
+	BroadcastExcludingSelf = 2,
+	/// <summary>
+	/// Only the sender will receive the data.
+	/// </summary>
+	Self = 3,
+}
+
 namespace Teste
 {
 	[Remote(Self = false, Name = "Sync1", Id = 10)]
@@ -292,6 +312,11 @@ namespace Teste
 		protected virtual void ___2205032023(byte id, IDataReader dataReader) { throw new NotImplementedException("NetVar not implemented!"); } // Deserialize
 
 		public bool IsServer;
+
+		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, DataTarget dataTarget, byte rpcId, byte channel = 0)
+		{
+
+		}
 
 		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, byte rpcId, byte channel = 0)
 		{

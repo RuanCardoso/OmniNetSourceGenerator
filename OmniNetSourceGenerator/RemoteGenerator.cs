@@ -92,6 +92,16 @@ namespace OmniNetSourceGenerator
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte channel = 0")),
 													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, peerId, {idValue}, channel: channel);")));
 
+												MethodDeclarationSyntax rpcSendWithBroadcastMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), methodName)
+													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+													.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+													 {
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataDeliveryMode dataDeliveryMode")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataTarget dataTarget")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte channel = 0")),
+													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, dataTarget, {idValue}, channel: channel);")));
+
 												// Partial methods
 												MethodDeclarationSyntax rpcServerMethod = null;
 												MethodDeclarationSyntax rpcClientMethod = null;
@@ -117,7 +127,7 @@ namespace OmniNetSourceGenerator
 
 													newClassDeclarationSyntax = newClassDeclarationSyntax.AddMembers(rpcServerMethod, rpcClientMethod);
 												}
-												newClassDeclarationSyntax = newClassDeclarationSyntax.AddMembers(rpcMethodDeclarationSyntax, rpcClientSendMethodDeclarationSyntax, rpcServerSendMethodDeclarationSyntax);
+												newClassDeclarationSyntax = newClassDeclarationSyntax.AddMembers(rpcMethodDeclarationSyntax, rpcClientSendMethodDeclarationSyntax, rpcServerSendMethodDeclarationSyntax, rpcSendWithBroadcastMethodDeclarationSyntax);
 											}
 										}
 
