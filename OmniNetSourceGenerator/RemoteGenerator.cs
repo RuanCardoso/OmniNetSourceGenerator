@@ -79,8 +79,8 @@ namespace OmniNetSourceGenerator
 													 {
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataDeliveryMode dataDeliveryMode")),
-													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte channel = 0")),
-													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, {idValue}, channel: channel);")));
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
+													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, {idValue}, sequenceChannel: sequenceChannel);")));
 
 												MethodDeclarationSyntax rpcServerSendMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), methodName)
 													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
@@ -89,8 +89,8 @@ namespace OmniNetSourceGenerator
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataDeliveryMode dataDeliveryMode")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("int peerId")),
-													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte channel = 0")),
-													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, peerId, {idValue}, channel: channel);")));
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
+													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, peerId, {idValue}, sequenceChannel: sequenceChannel);")));
 
 												MethodDeclarationSyntax rpcSendWithBroadcastMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), methodName)
 													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
@@ -99,8 +99,8 @@ namespace OmniNetSourceGenerator
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataDeliveryMode dataDeliveryMode")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataTarget dataTarget")),
-													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte channel = 0")),
-													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, dataTarget, {idValue}, channel: channel);")));
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
+													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, dataTarget, {idValue}, sequenceChannel: sequenceChannel);")));
 
 												// Partial methods
 												MethodDeclarationSyntax rpcServerMethod = null;
