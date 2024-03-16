@@ -1,4 +1,8 @@
-﻿using System.Text;
+﻿using System.ComponentModel;
+using System.Drawing;
+using System.Numerics;
+using System.Security.Principal;
+using System.Text;
 using Teste;
 
 namespace MessagePack
@@ -6,10 +10,18 @@ namespace MessagePack
 
 }
 
+namespace MemoryPack
+{
+
+}
+
+
 namespace Newtonsoft.Json
 {
 
 }
+
+
 
 public enum DataTarget : byte
 {
@@ -33,11 +45,12 @@ public enum DataTarget : byte
 
 namespace Teste
 {
-	[Remote(Self = false, Name = "Sync1", Id = 10)]
-	[Remote(Self = false, Name = "Sync2", Id = 5)]
+	[Remote("Move", 8, self: false)]
+	[Remote("Color", self: true, id: 19)]
+	[Remote("Rotation", id: 32)]
 	public partial class Programa : NetworkBehaviour
 	{
-		[NetVar]
+		[NetVar(target: TargetMode.Self, serializer: SerializerType.Json, delivery: DeliveryMode.ReliableEncryptedUnordered, sequenceChannel: 129)]
 		protected int m_IntNetVar;
 
 		[NetVar]
@@ -71,30 +84,42 @@ namespace Teste
 		protected uint m_UIntNetVar;
 
 		[NetVar]
-		protected long m_LongNetVar;		
+		protected long m_LongNetVar;
 
 		[NetVar]
 		protected ulong m_ULongNetVar;
 
-		[NetVar]
+		[NetVar(Serializer = SerializerType.Json, Target = TargetMode.BroadcastExcludingSelf, Delivery = DeliveryMode.ReliableEncryptedUnordered)]
 		private Tipo1 tipo1;
 
-		[NetVar(SerializeAsJson = false, CustomSerializeAndDeserialize = false)]
+		[NetVar]
 		private Tipo2 tipo2;
 
-		[NetVar(SerializeAsJson = true, CustomSerializeAndDeserialize = true)]
+		[NetVar]
 		public Dictionary<int, object> m_Equips;
 
-		[NetVar(SerializeAsJson = false, CustomSerializeAndDeserialize = false)]
+		[NetVar]
 		private Action<Tipo2> OnEnteredPlayer;
 
-		[NetVar(SerializeAsJson = true, CustomSerializeAndDeserialize = false)]
+		[NetVar]
 		private Action OnEnteredPlayer2;
 
-		partial void Sync1_Client(IDataReader reader, NetworkPeer peer)
-		{
-			throw new NotImplementedException();
-		}
+		[NetVar]
+		protected Vector3 m_UVectorNetVar;
+
+		[NetVar]
+		protected Vector2 m_UVector2NetVar;
+
+		[NetVar]
+		protected Quaternion m_UQNetVar;
+
+		[NetVar(Serializer = SerializerType.Json, Target = TargetMode.BroadcastExcludingSelf, Delivery = DeliveryMode.ReliableEncryptedUnordered)]
+		protected Color m_UCNetVar;
+
+		//partial void Sync1_Client(IDataReader reader, NetworkPeer peer)
+		//{
+		//	throw new NotImplementedException();
+		//}
 
 		static void Main()
 		{
@@ -124,6 +149,11 @@ namespace Teste
 
 		public Encoding Encoding => throw new NotImplementedException();
 
+		public bool IsReleased { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+		int IDataWriter.Position { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+		int IDataWriter.BytesWritten { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+		Encoding IDataWriter.Encoding { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
 		public void Clear()
 		{
 			throw new NotImplementedException();
@@ -145,6 +175,21 @@ namespace Teste
 		}
 
 		public void SerializeWithMsgPack<T>(T data, MessagePackSerializerOptions options)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void ToBinary<T>(T data, MemoryPackSerializerOptions options = null)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void ToBinary2<T>(T data, MessagePackSerializerOptions options = null)
+		{
+			throw new NotImplementedException();
+		}
+
+		public string ToJson<T>(T data, JsonSerializerSettings options = null)
 		{
 			throw new NotImplementedException();
 		}
@@ -269,6 +314,41 @@ namespace Teste
 			throw new NotImplementedException();
 		}
 
+		public void Write(ReadOnlySpan<byte> value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(Stream value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(Vector3 value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(Vector2 value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(Quaternion value)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write(Color color)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Write<T>(ISyncCustom ISyncCustom) where T : class
+		{
+			throw new NotImplementedException();
+		}
+
 		public void Write7BitEncodedInt(int value)
 		{
 			throw new NotImplementedException();
@@ -279,17 +359,27 @@ namespace Teste
 			throw new NotImplementedException();
 		}
 
+		public string WriteNonAlloc(string value)
+		{
+			throw new NotImplementedException();
+		}
+
 		public void WriteWithoutAllocation(string value)
+		{
+			throw new NotImplementedException();
+		}
+
+		string IDataWriter.Write(string value)
 		{
 			throw new NotImplementedException();
 		}
 	}
 
-	internal struct Tipo2
+	public struct Tipo2
 	{
 	}
 
-	internal class Tipo1
+	public class Tipo1
 	{
 	}
 
@@ -313,19 +403,97 @@ namespace Teste
 
 		public bool IsServer;
 
-		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, DataTarget dataTarget, byte rpcId, byte channel = 0)
+		/// <summary>
+		/// Sends a client RPC (Remote Procedure Call) to the server.
+		/// </summary>
+		/// <param name="writer">The data writer for the RPC message.</param>
+		/// <param name="deliveryMode">The delivery mode for the RPC message.</param>
+		/// <param name="targetMode">The target mode for the RPC message.</param>
+		/// <param name="rpcId">The ID of the RPC message.</param>
+		/// <param name="sequenceChannel">The sequence channel for the RPC message (default is 0).</param>
+		public void ClientRpc(IDataWriter writer, DeliveryMode deliveryMode, TargetMode targetMode, byte rpcId,
+			byte sequenceChannel = 0)
 		{
 
 		}
 
-		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, byte rpcId, byte channel = 0)
+		/// <summary>
+		/// Send a remote procedure call (RPC) from the client to the server.
+		/// </summary>
+		/// <param name="writer">The data writer to use for sending the RPC.</param>
+		/// <param name="rpcId">The ID of the RPC to send.</param>
+		/// <param name="deliveryMode">The delivery mode for the RPC (default is ReliableOrdered).</param>
+		/// <param name="targetMode">The target mode for the RPC (default is Broadcast).</param>
+		/// <param name="sequenceChannel">The sequence channel for the RPC (default is 0).</param>
+		public void ClientRpc(IDataWriter writer, byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered,
+			TargetMode targetMode = TargetMode.Broadcast, byte sequenceChannel = 0)
+		{
+		}
+
+		/// <summary>
+		/// Sends a client RPC with the specified RPC ID to the server, delivery mode, target mode, and sequence channel.
+		/// </summary>
+		/// <param name="rpcId">The ID of the RPC to be sent</param>
+		/// <param name="deliveryMode">The delivery mode for the RPC (default: ReliableOrdered)</param>
+		/// <param name="targetMode">The target mode for the RPC (default: Broadcast)</param>
+		/// <param name="sequenceChannel">The sequence channel for the RPC (default: 0)</param>
+		public void ClientRpc(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered,
+			TargetMode targetMode = TargetMode.Broadcast, byte sequenceChannel = 0)
+		{
+		}
+
+		/// <summary>
+		/// Sends a server RPC to a specific peer.
+		/// </summary>
+		/// <param name="writer">The data writer to use for sending the RPC.</param>
+		/// <param name="deliveryMode">The delivery mode of the RPC.</param>
+		/// <param name="peerId">The ID of the peer to send the RPC to.</param>
+		/// <param name="rpcId">The ID of the RPC to send.</param>
+		/// <param name="sequenceChannel">The sequence channel for the RPC (optional, default is 0).</param>
+		public void ServerRpc(IDataWriter writer, DeliveryMode deliveryMode, int peerId, byte rpcId,
+			byte sequenceChannel = 0)
 		{
 
 		}
 
-		public void Rpc(IDataWriter writer, DataDeliveryMode dataDeliveryMode, int playerId, byte rpcId, byte channel = 0)
+		/// <summary>
+		/// Sends a server RPC to the specified target using the provided data writer, delivery mode, target mode, RPC ID, and sequence channel.
+		/// Server RPCs is sent from the server to the client's.
+		/// </summary>
+		/// <param name="writer">The data writer used to write the RPC data.</param>
+		/// <param name="deliveryMode">The delivery mode for the RPC.</param>
+		/// <param name="targetMode">The target mode for the RPC.</param>
+		/// <param name="rpcId">The unique ID of the RPC.</param>
+		/// <param name="sequenceChannel">The sequence channel for the RPC (optional, default is 0).</param>
+		public void ServerRpc(IDataWriter writer, DeliveryMode deliveryMode, TargetMode targetMode, byte rpcId,
+			byte sequenceChannel = 0)
 		{
 
+		}
+
+		/// <summary>
+		/// Sends a server RPC to the client with the specified RPC ID, delivery mode, target mode, and sequence channel.
+		/// </summary>
+		/// <param name="writer">The data writer for the RPC.</param>
+		/// <param name="rpcId">The ID of the RPC.</param>
+		/// <param name="deliveryMode">The delivery mode for the RPC (default is ReliableOrdered).</param>
+		/// <param name="targetMode">The target mode for the RPC (default is Broadcast).</param>
+		/// <param name="sequenceChannel">The sequence channel for the RPC (default is 0).</param>
+		public void ServerRpc(IDataWriter writer, byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered,
+			TargetMode targetMode = TargetMode.Broadcast, byte sequenceChannel = 0)
+		{
+		}
+
+		/// <summary>
+		/// Sends a server RPC to the client with the specified RPC ID, delivery mode, target mode, and sequence channel.
+		/// </summary>
+		/// <param name="rpcId">The ID of the RPC to send.</param>
+		/// <param name="deliveryMode">The delivery mode for the RPC (default is ReliableOrdered).</param>
+		/// <param name="targetMode">The target mode for the RPC (default is Broadcast).</param>
+		/// <param name="sequenceChannel">The sequence channel for the RPC (default is 0).</param>
+		public void ServerRpc(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered,
+			TargetMode targetMode = TargetMode.Broadcast, byte sequenceChannel = 0)
+		{
 		}
 
 		protected virtual void OnCustomSerialize(byte id, IDataWriter writer, int argIndex = 0) // argIndex to delegates
@@ -338,7 +506,7 @@ namespace Teste
 
 		}
 
-		protected void ___2205032024(IDataWriter writer, byte id) { }
+		protected void ___2205032024(IDataWriter writer, byte id, DeliveryMode deliveryMode, TargetMode targetMode, byte sequenceChannel = 0) { }
 
 		internal IDataWriter GetWriter()
 		{
@@ -366,6 +534,11 @@ namespace Teste
 		public static MessagePackSerializerOptions DefaultOptions;
 	}
 
+	public class MemoryPackSerializer
+	{
+
+	}
+
 	public class Network : NetworkBehaviour
 	{
 
@@ -375,8 +548,15 @@ namespace Teste
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
 public class RemoteAttribute : Attribute
 {
-	public byte Id { get; set; }
+	public RemoteAttribute(string name, byte id = 0, bool self = false)
+	{
+		Name = name;
+		Id = id;
+		Self = self;
+	}
+
 	public string Name { get; set; }
+	public byte Id { get; set; }
 	public bool Self { get; set; }
 }
 
@@ -384,20 +564,39 @@ public class RemoteAttribute : Attribute
 [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
 public class NetVarAttribute : Attribute
 {
-	public bool SerializeAsJson { get; set; }
-	public bool CustomSerializeAndDeserialize { get; set; }
+	public NetVarAttribute(SerializerType serializer = SerializerType.MemPack, TargetMode target = TargetMode.Broadcast, DeliveryMode delivery = DeliveryMode.ReliableOrdered, byte sequenceChannel = 0)
+	{
+		Serializer = serializer;
+		Target = target;
+		Delivery = delivery;
+		SequenceChannel = sequenceChannel;
+	}
+
+	public SerializerType Serializer { get; set; } = SerializerType.MemPack;
+	public TargetMode Target { get; set; } = TargetMode.Broadcast;
+	public DeliveryMode Delivery { get; set; } = DeliveryMode.ReliableOrdered;
+	public byte SequenceChannel { get; set; } = 0;
 }
+public enum SerializerType : byte
+{
+	Json,
+	MsgPack,
+	MemPack,
+}
+
 
 public interface IDataWriter
 {
 	byte[] Buffer { get; }
-	int Position { get; }
-	int BytesWritten { get; }
-	Encoding Encoding { get; }
+	int Position { get; set; }
+	int BytesWritten { get; set; }
+	bool IsReleased { get; set; }
+	Encoding Encoding { get; set; }
 	void Clear();
-	void Write<T>(T notSupported); // Roslyn NetVarTypes
 	void Write(byte[] buffer, int offset, int count);
 	void Write(Span<byte> value);
+	void Write(ReadOnlySpan<byte> value);
+	void Write(Stream value);
 	void Write(char value);
 	void Write(byte value);
 	void Write(short value);
@@ -410,11 +609,16 @@ public interface IDataWriter
 	void Write(ushort value);
 	void Write(uint value);
 	void Write(ulong value);
-	void Write(string value);
-	void WriteWithoutAllocation(string value);
-	void SerializeWithCustom<T>(ISyncCustom ISyncCustom) where T : class;
-	void SerializeWithJsonNet<T>(T data, JsonSerializerSettings options);
-	void SerializeWithMsgPack<T>(T data, MessagePackSerializerOptions options);
+	string Write(string value);
+	void Write(Vector3 value);
+	void Write(Vector2 value);
+	void Write(Quaternion value);
+	void Write(Color color);
+	string WriteNonAlloc(string value);
+	void Write<T>(ISyncCustom ISyncCustom) where T : class;
+	string ToJson<T>(T data, JsonSerializerSettings options = null);
+	void ToBinary2<T>(T data, MessagePackSerializerOptions options = null);
+	void ToBinary<T>(T data, MemoryPackSerializerOptions options = null);
 	void Write(bool value);
 	void Write(bool v1, bool v2);
 	void Write(bool v1, bool v2, bool v3);
@@ -431,14 +635,20 @@ public interface IDataWriter
 public interface IDataReader
 {
 	byte[] Buffer { get; }
-	int Position { get; }
-	int BytesWritten { get; }
-	Encoding Encoding { get; }
-	void Recycle();
+	int Position { get; set; }
+	int BytesWritten { get; set; }
+	bool ResetPositionAfterWriting { get; set; }
+	bool IsReleased { get; set; }
+	Encoding Encoding { get; set; }
+	void Clear();
 	void Write(byte[] buffer, int offset, int count);
+	void Write(Span<byte> value);
+	void Write(ReadOnlySpan<byte> value);
+	void Write(Stream value);
 	void Read(byte[] buffer, int offset, int count);
 	int Read(Span<byte> value);
-	T ReadCustomMessage<T>() where T : unmanaged, IComparable, IConvertible, IFormattable;
+	T ReadId<T>(out int lastPos) where T : unmanaged, IComparable, IConvertible, IFormattable;
+	T ReadId<T>() where T : unmanaged, IComparable, IConvertible, IFormattable;
 	char ReadChar();
 	byte ReadByte();
 	short ReadShort();
@@ -450,10 +660,15 @@ public interface IDataReader
 	sbyte ReadSByte();
 	ushort ReadUShort();
 	string ReadString();
-	string ReadStringWithoutAllocation();
-	void DeserializeWithCustom<T>(ISyncCustom ISyncCustom) where T : class;
-	T DeserializeWithJsonNet<T>(JsonSerializerSettings options);
-	T DeserializeWithMsgPack<T>(MessagePackSerializerOptions options);
+	Vector3 ReadVector3();
+	Vector2 ReadVector2();
+	Quaternion ReadQuaternion();
+	Color ReadColor();
+	string ReadStringNonAlloc();
+	void ReadCustom<T>(ISyncCustom ISyncCustom) where T : class;
+	T ReadJson<T>(JsonSerializerSettings options = null);
+	T ReadBinary2<T>(MessagePackSerializerOptions options = null);
+	T ReadBinary<T>(MemoryPackSerializerOptions options = null);
 	uint ReadUInt();
 	ulong ReadULong();
 	bool ReadBool();
@@ -463,7 +678,10 @@ public interface IDataReader
 	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5);
 	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6);
 	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6, out bool v7);
-	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6, out bool v7, out bool v8);
+
+	void ReadBool(out bool v1, out bool v2, out bool v3, out bool v4, out bool v5, out bool v6, out bool v7,
+		out bool v8);
+
 	int Read7BitEncodedInt();
 	long Read7BitEncodedInt64();
 	T Marshalling_ReadStructure<T>() where T : struct;
@@ -475,14 +693,12 @@ public class DataDeliveryMode
 {
 }
 
-[Remote(Self = false, Name = "Sync3", Id = 10)]
-[Remote(Self = false, Name = "Sync4", Id = 5)]
 public partial class RpcTestes : NetworkBehaviour
 {
-	[NetVar(SerializeAsJson = true)]
+	[NetVar]
 	private float m_health, m_Ammo;
 
-	[NetVar(SerializeAsJson = true)]
+	[NetVar]
 	private Action OnCreated;
 	void dd()
 	{

@@ -38,97 +38,159 @@ namespace OmniNetSourceGenerator
 									ClassDeclarationSyntax newClassDeclarationSyntax = SyntaxFactory.ClassDeclaration(originalClassDeclarationSyntax.Identifier.Text).
 										WithModifiers(originalClassDeclarationSyntax.Modifiers).WithBaseList(originalClassDeclarationSyntax.BaseList);
 
-									var attributeSyntaxes = originalClassDeclarationSyntax.AttributeLists.SelectMany(x => x.Attributes.Where(y => y.ArgumentList != null && y.ArgumentList.Arguments.Count == 3 && y.Name.ToString() == "Remote"));
+									int idIndex = 0;
+									var attributeSyntaxes = originalClassDeclarationSyntax.AttributeLists.SelectMany(x => x.Attributes.Where(y => y.ArgumentList != null && y.ArgumentList.Arguments.Count >= 1 && y.Name.ToString() == "Remote"));
 									if (attributeSyntaxes.Any())
 									{
 										foreach (var attributeSyntax in attributeSyntaxes)
 										{
-											var arguments = attributeSyntax.ArgumentList.Arguments;
-											var idExpression = arguments.First(x => x.NameEquals.Name.Identifier.Text == "Id");
-											var nameExpression = arguments.First(x => x.NameEquals.Name.Identifier.Text == "Name");
-											var selfExpression = arguments.First(x => x.NameEquals.Name.Identifier.Text == "Self");
+											bool selfValue = false;
 
-											string idValue = ((LiteralExpressionSyntax)idExpression.Expression).Token.ValueText;
-											string methodName = ((LiteralExpressionSyntax)nameExpression.Expression).Token.ValueText;
-											if (bool.TryParse(((LiteralExpressionSyntax)selfExpression.Expression).Token.ValueText, out bool selfValue))
+											var arguments = attributeSyntax.ArgumentList.Arguments;
+											var nameExpression = Helper.GetArgumentExpression<LiteralExpressionSyntax>("Name", 0, arguments);
+											var idExpression = Helper.GetArgumentExpression<LiteralExpressionSyntax>("Id", 1, arguments);
+											var selfExpression = Helper.GetArgumentExpression<LiteralExpressionSyntax>("Self", 2, arguments);
+
+											if (nameExpression == null)
 											{
-												// RPC Method
-												MethodDeclarationSyntax rpcMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), !selfValue ? $"__{Math.Abs(methodName.GetHashCode())}" : methodName)
-													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(selfValue ? SyntaxKind.PartialKeyword : SyntaxKind.PrivateKeyword))).
-													WithAttributeLists(SyntaxFactory.List(new AttributeListSyntax[]
-													{
+												context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CA005", "Omni", "The 'Remote' attribute requires the 'name' argument.", "", DiagnosticSeverity.Error, true), Location.None));
+												return;
+											}
+
+											idIndex++;
+											string idValue = idExpression != null ? idExpression.Token.ValueText : idIndex.ToString();
+											string methodName = nameExpression.Token.ValueText;
+
+											if (selfExpression != null)
+											{
+												if (bool.TryParse(selfExpression.Token.ValueText, out bool selfValueParsed))
+												{
+													selfValue = selfValueParsed;
+												}
+											}
+
+											// Id Property
+											PropertyDeclarationSyntax idPropertySyntax = SyntaxFactory.PropertyDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.ByteKeyword)), $"{methodName}Id").WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword), SyntaxFactory.Token(SyntaxKind.ConstKeyword)))
+											.WithInitializer(SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseName($"{idValue};")));
+
+											// RPC Method
+											MethodDeclarationSyntax rpcMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), !selfValue ? $"__{Math.Abs(methodName.GetHashCode())}" : methodName)
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(selfValue ? SyntaxKind.PartialKeyword : SyntaxKind.PrivateKeyword))).
+												WithAttributeLists(SyntaxFactory.List(new AttributeListSyntax[]
+												{
 													SyntaxFactory.AttributeList(SyntaxFactory.SeparatedList(new AttributeSyntax[]
 													{
 														attributeSyntax,
 													})),
-													}))
-													.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
-													 {
+												}))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataReader reader")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer")),
-													 })));
+												 })));
 
-												rpcMethodDeclarationSyntax = !selfValue
-													? rpcMethodDeclarationSyntax.WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement(string.Concat("if (IsServer) {", $"{methodName}_Server(reader, peer);", "}", "else {", $"{methodName}_Client(reader, peer);", "}"))))
-													: rpcMethodDeclarationSyntax.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+											rpcMethodDeclarationSyntax = !selfValue
+												? rpcMethodDeclarationSyntax.WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement(string.Concat("if (IsServer) {", $"{methodName}_Server(reader, peer);", "}", "else {", $"{methodName}_Client(reader, peer);", "}"))))
+												: rpcMethodDeclarationSyntax.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
-												//RPC Send Method
-												MethodDeclarationSyntax rpcClientSendMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), methodName)
-													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
-													.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
-													 {
+											//RPC Client Send Method with overloads!
+											MethodDeclarationSyntax rpcClientSendMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}ClientRpc")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
-													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataDeliveryMode dataDeliveryMode")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DeliveryMode deliveryMode")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("TargetMode targetMode")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
-													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, {idValue}, sequenceChannel: sequenceChannel);")));
+												 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"ClientRpc(writer, deliveryMode, targetMode, {methodName}Id, sequenceChannel);")));
 
-												MethodDeclarationSyntax rpcServerSendMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), methodName)
-													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
-													.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
-													 {
+											// Overload 1
+											MethodDeclarationSyntax rpcClientSendMethodDeclarationSyntax2 = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}ClientRpc")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
-													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataDeliveryMode dataDeliveryMode")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("TargetMode targetMode = TargetMode.Broadcast")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
+												 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"ClientRpc(writer, deliveryMode, targetMode, {methodName}Id, sequenceChannel);")));
+
+											// Overload 2
+											MethodDeclarationSyntax rpcClientSendMethodDeclarationSyntax3 = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}ClientRpc")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("TargetMode targetMode = TargetMode.Broadcast")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
+												 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"ClientRpc(DataWriter.Empty, deliveryMode, targetMode, {methodName}Id, sequenceChannel);")));
+
+											//RPC Server Send Method with overloads!
+											MethodDeclarationSyntax rpcServerSendMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}ServerRpc")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DeliveryMode deliveryMode")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("int peerId")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
-													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, peerId, {idValue}, sequenceChannel: sequenceChannel);")));
+												 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"ServerRpc(writer, deliveryMode, peerId, {methodName}Id, sequenceChannel);")));
 
-												MethodDeclarationSyntax rpcSendWithBroadcastMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), methodName)
-													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
-													.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
-													 {
+											MethodDeclarationSyntax rpcServerSendWithBroadcastMethodDeclarationSyntax = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}ServerRpc")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
-													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataDeliveryMode dataDeliveryMode")),
-													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataTarget dataTarget")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DeliveryMode deliveryMode")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("TargetMode targetMode")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
-													 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Rpc(writer, dataDeliveryMode, dataTarget, {idValue}, sequenceChannel: sequenceChannel);")));
+												 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"ServerRpc(writer, deliveryMode, targetMode, {methodName}Id, sequenceChannel);")));
 
-												// Partial methods
-												MethodDeclarationSyntax rpcServerMethod = null;
-												MethodDeclarationSyntax rpcClientMethod = null;
-												if (!selfValue)
-												{
-													#region Partial Methods
-													rpcServerMethod = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}_Server")
-													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PartialKeyword)))
-													.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
-													 {
+											MethodDeclarationSyntax rpcServerSendWithBroadcastMethodDeclarationSyntax2 = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}ServerRpc")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataWriter writer")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("TargetMode targetMode = TargetMode.Broadcast")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
+												 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"ServerRpc(writer, deliveryMode, targetMode, {methodName}Id, sequenceChannel);")));
+
+											MethodDeclarationSyntax rpcServerSendWithBroadcastMethodDeclarationSyntax3 = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}ServerRpc")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("TargetMode targetMode = TargetMode.Broadcast")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered")),
+													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte sequenceChannel = 0")),
+												 }))).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"ServerRpc(DataWriter.Empty, deliveryMode, targetMode, {methodName}Id, sequenceChannel);")));
+
+											// Partial methods
+											MethodDeclarationSyntax rpcServerMethod = null;
+											MethodDeclarationSyntax rpcClientMethod = null;
+											if (!selfValue)
+											{
+												#region Partial Methods
+												rpcServerMethod = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}_Server")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PartialKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataReader reader")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer")),
-													 }))).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+												 }))).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 
-													rpcClientMethod = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}_Client")
-													.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PartialKeyword)))
-													.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
-													 {
+												rpcClientMethod = SyntaxFactory.MethodDeclaration(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), $"{methodName}_Client")
+												.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PartialKeyword)))
+												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]
+												 {
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("IDataReader reader")),
 													   SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer")),
-													 }))).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
-													#endregion;
+												 }))).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+												#endregion;
 
-													newClassDeclarationSyntax = newClassDeclarationSyntax.AddMembers(rpcServerMethod, rpcClientMethod);
-												}
-												newClassDeclarationSyntax = newClassDeclarationSyntax.AddMembers(rpcMethodDeclarationSyntax, rpcClientSendMethodDeclarationSyntax, rpcServerSendMethodDeclarationSyntax, rpcSendWithBroadcastMethodDeclarationSyntax);
+												newClassDeclarationSyntax = newClassDeclarationSyntax.AddMembers(rpcServerMethod, rpcClientMethod);
 											}
+											newClassDeclarationSyntax = newClassDeclarationSyntax.AddMembers(idPropertySyntax, rpcMethodDeclarationSyntax.WithLeadingTrivia(SyntaxFactory.Comment("\n")), rpcClientSendMethodDeclarationSyntax, rpcClientSendMethodDeclarationSyntax2, rpcClientSendMethodDeclarationSyntax3, rpcServerSendMethodDeclarationSyntax, rpcServerSendWithBroadcastMethodDeclarationSyntax, rpcServerSendWithBroadcastMethodDeclarationSyntax2, rpcServerSendWithBroadcastMethodDeclarationSyntax3);
 										}
 
 										newNamespaceDeclarationSyntax = newNamespaceDeclarationSyntax.AddMembers(newClassDeclarationSyntax);
@@ -137,7 +199,7 @@ namespace OmniNetSourceGenerator
 									}
 									else
 									{
-										context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CA005", "Omni", "The 'Remote' attribute requires three arguments.", "", DiagnosticSeverity.Error, true), Location.None));
+										context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CA005", "Omni", "The 'Remote' attribute requires two arguments or more.", "", DiagnosticSeverity.Error, true), Location.None));
 									}
 								}
 								else
