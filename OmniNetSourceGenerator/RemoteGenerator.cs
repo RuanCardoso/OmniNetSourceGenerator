@@ -56,6 +56,14 @@ namespace OmniNetSourceGenerator
 												context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CA005", "Omni", "The 'Remote' attribute requires the 'name' argument.", "", DiagnosticSeverity.Error, true), Location.None));
 												return;
 											}
+											else
+											{
+												if (int.TryParse(nameExpression.Token.ValueText, out _)) // Its a id or a name??
+												{
+													context.ReportDiagnostic(Diagnostic.Create(new DiagnosticDescriptor("CA005", "Omni", "The 'Remote' attribute requires the 'name' argument.", "", DiagnosticSeverity.Error, true), Location.None));
+													return;
+												}
+											}
 
 											idIndex++;
 											string idValue = idExpression != null ? idExpression.Token.ValueText : idIndex.ToString();
@@ -80,7 +88,9 @@ namespace OmniNetSourceGenerator
 												{
 													SyntaxFactory.AttributeList(SyntaxFactory.SeparatedList(new AttributeSyntax[]
 													{
-														attributeSyntax,
+														SyntaxFactory.Attribute(SyntaxFactory.ParseName("Remote"), SyntaxFactory.AttributeArgumentList(SyntaxFactory.SeparatedList(new AttributeArgumentSyntax[] {
+															SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"{idValue}")),
+														})))
 													})),
 												}))
 												.WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(new ParameterSyntax[]

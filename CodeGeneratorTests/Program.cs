@@ -548,6 +548,12 @@ namespace Teste
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
 public class RemoteAttribute : Attribute
 {
+	public RemoteAttribute(byte id)
+	{
+		Id = id;
+	}
+
+
 	public RemoteAttribute(string name, byte id = 0, bool self = false)
 	{
 		Name = name;
