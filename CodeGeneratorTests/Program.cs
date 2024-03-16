@@ -50,7 +50,7 @@ namespace Teste
 	[Remote("Rotation", id: 32)]
 	public partial class Programa : NetworkBehaviour
 	{
-		[NetVar(target: TargetMode.Self, serializer: SerializerType.Json, delivery: DeliveryMode.ReliableEncryptedUnordered, sequenceChannel: 129)]
+		[NetVar(SerializerType.Json, TargetMode.Server, sequenceChannel: 9)]
 		protected int m_IntNetVar;
 
 		[NetVar]

@@ -33,9 +33,14 @@ namespace OmniNetSourceGenerator
 
 					if (arguments[argumentIndex] != null)
 					{
-						T indexedArgument = (T)arguments[argumentIndex].Expression;
-						if (argument.Expression == indexedArgument)
-							return indexedArgument;
+						if (arguments[argumentIndex].Expression is T indexedArgument) // Check expression compatibility ex: 'Literal' with 'Member' = false, 'Literal' with 'Literal' = true
+						{
+							// Check type and order compatibility, ex, Literal with Literal, Ok, but the first is a 'byte' and the second is a 'int', not ok... byte with byte Ok, int with int, Ok.
+							// Check if the expression is the same, if yes, Ok, if no, incorrect argument passed even if the two have the same type, this option will detect it.
+							if (argument.Expression == indexedArgument)
+								return indexedArgument;
+							else continue;
+						}
 						else continue;
 					}
 					else continue;
