@@ -181,11 +181,13 @@ namespace OmniNetSourceGenerator
 												 .WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"return {fieldName};"))),
 											   SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
 												 .WithBody(SyntaxFactory.Block(
-													 SyntaxFactory.ParseStatement($"{fieldName} = value;"),
-													 SyntaxFactory.ParseStatement($"IDataWriter writer = GetWriter();").WithLeadingTrivia(SyntaxFactory.Comment("// Let's serialize the data and send it to the network.")),
-													 SyntaxFactory.ParseStatement(m_NetVarSupportedTypes.ContainsKey(declarationType.ToString()) ? $"writer.Write({fieldName});" : $"{(serializerType == SerializerType.Json ? $"writer.ToJson({fieldName}, {serializerSettingsSyntax.Identifier.ValueText});" : serializerType == SerializerType.MsgPack ? $"writer.ToBinary2({fieldName}, {serializerSettingsSyntax.Identifier.ValueText});" : $"writer.ToBinary({fieldName}, {serializerSettingsSyntax.Identifier.ValueText});")}"),
-													 SyntaxFactory.ParseStatement($"___2205032024(writer, {netVarId}, DeliveryMode.{delivery}, TargetMode.{target}, {sequenceChannel});"),
-													 SyntaxFactory.ParseStatement("Release(writer);")
+													 SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression(m_NetVarSupportedTypes.ContainsKey(declarationType.ToString()) ? $"value != {fieldName}" : "true"), SyntaxFactory.Block(
+														  SyntaxFactory.ParseStatement($"{fieldName} = value;"),
+														  SyntaxFactory.ParseStatement($"IDataWriter writer = GetWriter();").WithLeadingTrivia(SyntaxFactory.Comment("// Let's serialize the data and send it to the network.")),
+														  SyntaxFactory.ParseStatement(m_NetVarSupportedTypes.ContainsKey(declarationType.ToString()) ? $"writer.Write({fieldName});" : $"{(serializerType == SerializerType.Json ? $"writer.ToJson({fieldName}, {serializerSettingsSyntax.Identifier.ValueText});" : serializerType == SerializerType.MsgPack ? $"writer.ToBinary2({fieldName}, {serializerSettingsSyntax.Identifier.ValueText});" : $"writer.ToBinary({fieldName}, {serializerSettingsSyntax.Identifier.ValueText});")}"),
+														  SyntaxFactory.ParseStatement($"___2205032024(writer, {netVarId}, DeliveryMode.{delivery}, TargetMode.{target}, {sequenceChannel});"),
+														  SyntaxFactory.ParseStatement("Release(writer);")
+														 ))
 												 )).WithTrailingTrivia(SyntaxFactory.Comment($"// IsUnmanagedType: {typeInfo.ConvertedType.IsUnmanagedType} | Type: {declarationType} | Serializer: {serializerType} | Delivery: {delivery} | Target: {target} | Kind: {typeInfo.ConvertedType.TypeKind}")),
 												})));
 
