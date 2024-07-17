@@ -147,7 +147,7 @@ namespace OmniNetSourceGenerator
                                                         {
                                                             SyntaxFactory.Parameter(
                                                                 SyntaxFactory.Identifier(
-                                                                    "NetworkBuffer buffer"
+                                                                    "DataBuffer buffer"
                                                                 )
                                                             ),
                                                             SyntaxFactory.Parameter(
@@ -179,7 +179,7 @@ namespace OmniNetSourceGenerator
                                                         {
                                                             SyntaxFactory.Parameter(
                                                                 SyntaxFactory.Identifier(
-                                                                    "NetworkBuffer buffer"
+                                                                    "DataBuffer buffer"
                                                                 )
                                                             ),
                                                         }
@@ -212,7 +212,7 @@ namespace OmniNetSourceGenerator
                                                     {
                                                         SyntaxFactory.Parameter(
                                                             SyntaxFactory.Identifier(
-                                                                "NetworkBuffer buffer"
+                                                                "DataBuffer buffer"
                                                             )
                                                         ),
                                                         SyntaxFactory.Parameter(

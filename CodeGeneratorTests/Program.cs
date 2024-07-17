@@ -26,7 +26,7 @@ public class NetVar : Attribute
 
 public class NetworkBehaviour : NetVarBehaviour
 {
-    protected virtual void ___OnPropertyChanged___(NetworkBuffer buffer, NetworkPeer peer) { }
+    protected virtual void ___OnPropertyChanged___(DataBuffer buffer, NetworkPeer peer) { }
 }
 
 namespace MemoryPack { }
@@ -35,7 +35,7 @@ namespace Newtonsoft.Json { }
 
 public class NetworkPeer { }
 
-public class NetworkBuffer
+public class DataBuffer
 {
     public T Read<T>()
     {
