@@ -53,9 +53,9 @@ namespace OmniNetSourceGenerator
                                     currentClassSyntax.BaseList != null
                                     && currentClassSyntax.BaseList.Types.Any(x =>
                                         x.ToString() == "NetworkBehaviour"
-                                        || x.ToString() == "NetworkEventBehaviour"
-                                        || x.ToString() == "ClientEventBehaviour"
-                                        || x.ToString() == "ServerEventBehaviour"
+                                        || x.ToString() == "DualBehaviour"
+                                        || x.ToString() == "ClientBehaviour"
+                                        || x.ToString() == "ServerBehaviour"
                                     )
                                 )
                                 {
