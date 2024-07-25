@@ -1,21 +1,15 @@
-﻿namespace NamespaceTests
+﻿#nullable disable
+
+using System.Collections;
+
+namespace NamespaceTests
 {
-    partial class Program : NetworkBehaviour
+    public partial class Program : ServerBehaviour
     {
-        private int m_Health = 100;
+        [NetVar(1)]
+        private int m_Mana;
 
-        [NetVar(id: 10)]
-        int Health { get; set; } = 100;
-
-        private Dictionary<string, int> m_Mana = new();
-
-        [NetVar(12)]
-        Dictionary<string, int> Mana { get; set; } = new();
-
-        static void Main()
-        {
-            Console.WriteLine("Hello World!");
-        }
+        static void Main(string[] args) { }
     }
 }
 
@@ -24,9 +18,63 @@ public class NetVar : Attribute
     public NetVar(byte id) { }
 }
 
-public class NetworkBehaviour : NetVarBehaviour
+public class ServerBehaviour
 {
     protected virtual void ___OnPropertyChanged___(DataBuffer buffer, NetworkPeer peer) { }
+
+    public class Event
+    {
+        public void ManualSync<T>(T property, byte propertyId, SyncOptions options) { }
+    }
+
+    public Event Remote;
+    public Event Local;
+}
+
+public class ClientBehaviour
+{
+    protected virtual void ___OnPropertyChanged___(DataBuffer buffer, NetworkPeer peer) { }
+
+    public class Event
+    {
+        public void ManualSync<T>(T property, byte propertyId, SyncOptions options) { }
+    }
+
+    public Event Remote;
+    public Event Local;
+}
+
+public class DualBehaviour
+{
+    protected virtual void ___OnPropertyChanged___(DataBuffer buffer, NetworkPeer peer) { }
+
+    public class Event
+    {
+        public void ManualSync<T>(T property, byte propertyId, SyncOptions options) { }
+    }
+
+    public Event Remote;
+    public Event Local;
+}
+
+public class NetworkBehaviour : NetVarBehaviour
+{
+    public bool IsMine => false;
+
+    protected virtual void ___OnPropertyChanged___(DataBuffer buffer, NetworkPeer peer) { }
+
+    public class Event
+    {
+        public void ManualSync<T>(T property, byte propertyId, SyncOptions options) { }
+    }
+
+    public Event Remote;
+    public Event Local;
+}
+
+public struct SyncOptions
+{
+    public static SyncOptions Default => new SyncOptions();
 }
 
 namespace MemoryPack { }
@@ -59,3 +107,5 @@ public class Client : Attribute
 }
 
 public class NetVarBehaviour { }
+
+interface ABBS { }

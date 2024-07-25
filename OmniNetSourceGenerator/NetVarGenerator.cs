@@ -6,6 +6,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+// Generate serializer and deserialize methods.
+// override ___OnPropertyChanged___ and etc.
+
 namespace OmniNetSourceGenerator
 {
     [Generator]
@@ -29,6 +32,7 @@ namespace OmniNetSourceGenerator
 
                             #region Usings
                             StringBuilder sb = new StringBuilder();
+                            sb.AppendLine("#nullable disable");
                             sb.AppendLine("using Newtonsoft.Json;");
                             sb.AppendLine("using MemoryPack;");
 
@@ -42,10 +46,6 @@ namespace OmniNetSourceGenerator
                                 sb.AppendLine(usingSyntax.ToString());
                             }
                             #endregion
-
-                            SemanticModel semanticModel = context.Compilation.GetSemanticModel(
-                                currentClassSyntax.SyntaxTree
-                            );
 
                             if (currentClassSyntax.Modifiers.Any(SyntaxKind.PartialKeyword))
                             {
@@ -80,20 +80,21 @@ namespace OmniNetSourceGenerator
                                     List<SwitchSectionSyntax> sections =
                                         new List<SwitchSectionSyntax>();
 
-                                    foreach (PropertyDeclarationSyntax prop in classWProp)
+                                    foreach (MemberDeclarationSyntax member in classWProp)
                                     {
                                         byte id = 0;
-                                        TypeSyntax declarationType = prop.Type;
-                                        TypeInfo typeInfo = semanticModel.GetTypeInfo(
-                                            declarationType
-                                        );
+                                        TypeSyntax declarationType = member
+                                            is FieldDeclarationSyntax field
+                                            ? field.Declaration.Type
+                                            : ((PropertyDeclarationSyntax)member).Type;
 
-                                        var attributeSyntaxes = prop.AttributeLists.SelectMany(x =>
-                                            x.Attributes.Where(y =>
-                                                y.ArgumentList != null
-                                                && y.ArgumentList.Arguments.Count > 0
-                                                && y.Name.ToString() == "NetVar"
-                                            )
+                                        var attributeSyntaxes = member.AttributeLists.SelectMany(
+                                            x =>
+                                                x.Attributes.Where(y =>
+                                                    y.ArgumentList != null
+                                                    && y.ArgumentList.Arguments.Count > 0
+                                                    && y.Name.ToString() == "NetVar"
+                                                )
                                         );
 
                                         if (attributeSyntaxes.Any())
@@ -126,13 +127,42 @@ namespace OmniNetSourceGenerator
                                             }
                                         }
 
-                                        sections.Add(
-                                            CreateSection(
-                                                id.ToString(),
-                                                prop.Identifier.Text,
-                                                declarationType.ToString()
+                                        if (member is PropertyDeclarationSyntax propSyntax)
+                                        {
+                                            sections.Add(
+                                                CreateSection(
+                                                    id.ToString(),
+                                                    propSyntax.Identifier.Text,
+                                                    declarationType.ToString()
+                                                )
+                                            );
+                                        }
+                                        else if (member is FieldDeclarationSyntax fieldSyntax)
+                                        {
+                                            if (fieldSyntax.Declaration.Variables.Count > 1)
+                                            {
+                                                id = 150;
+                                            }
+
+                                            foreach (
+                                                var variable in fieldSyntax.Declaration.Variables
                                             )
-                                        );
+                                            {
+                                                // remove m_ prefix
+                                                string variableName =
+                                                    variable.Identifier.Text.Substring(2);
+
+                                                sections.Add(
+                                                    CreateSection(
+                                                        id.ToString(),
+                                                        variableName,
+                                                        declarationType.ToString()
+                                                    )
+                                                );
+
+                                                id++;
+                                            }
+                                        }
                                     }
 
                                     MethodDeclarationSyntax onServerPropertyChanged =
@@ -262,7 +292,7 @@ namespace OmniNetSourceGenerator
                                     }
 
                                     context.AddSource(
-                                        $"{currentClassSyntax.Identifier.ToFullString()}_netvar_gen_code.cs",
+                                        $"{currentClassSyntax.Identifier.ToFullString()}_netvar_generated_code.cs",
                                         sb.ToString()
                                     );
                                 }
@@ -392,11 +422,11 @@ namespace OmniNetSourceGenerator
 
     internal class NetVarSyntaxReceiver : ISyntaxReceiver
     {
-        internal List<PropertyDeclarationSyntax> propList = new List<PropertyDeclarationSyntax>();
+        internal List<MemberDeclarationSyntax> propList = new List<MemberDeclarationSyntax>();
 
         public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
         {
-            if (syntaxNode is PropertyDeclarationSyntax propSyntax)
+            if (syntaxNode is MemberDeclarationSyntax propSyntax)
             {
                 if (
                     propSyntax.AttributeLists.Any(x =>
