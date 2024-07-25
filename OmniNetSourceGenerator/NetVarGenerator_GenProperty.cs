@@ -44,10 +44,6 @@ namespace OmniNetSourceGenerator
                             }
                             #endregion
 
-                            SemanticModel semanticModel = context.Compilation.GetSemanticModel(
-                                currentClassSyntax.SyntaxTree
-                            );
-
                             if (currentClassSyntax.Modifiers.Any(SyntaxKind.PartialKeyword))
                             {
                                 if (
@@ -90,11 +86,8 @@ namespace OmniNetSourceGenerator
                                     foreach (FieldDeclarationSyntax field in classWField)
                                     {
                                         byte id = 0;
-                                        TypeSyntax declarationType = field.Declaration.Type;
-                                        TypeInfo typeInfo = semanticModel.GetTypeInfo(
-                                            declarationType
-                                        );
 
+                                        TypeSyntax declarationType = field.Declaration.Type;
                                         var attributeSyntaxes = field.AttributeLists.SelectMany(x =>
                                             x.Attributes.Where(y =>
                                                 y.ArgumentList != null

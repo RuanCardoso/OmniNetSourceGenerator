@@ -9,14 +9,20 @@ namespace NamespaceTests
         [NetworkVariable(5)]
         private int m_Mana2;
 
-        [NetworkVariable(34)]
+        [NetworkVariable]
         private int m_Mana1,
             m_Mana3,
             m_Mana4,
             m_Mana5;
 
+        private int m_MyLife3;
+
         [NetworkVariable]
-        public int m_LifeZ;
+        public int MyLife3
+        {
+            get { return m_MyLife3; }
+            set { m_MyLife3 = value; }
+        }
 
         static void Main(string[] args) { }
     }
