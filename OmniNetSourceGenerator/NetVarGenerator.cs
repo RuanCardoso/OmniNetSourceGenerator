@@ -80,6 +80,12 @@ namespace OmniNetSourceGenerator
                                     List<SwitchSectionSyntax> sections =
                                         new List<SwitchSectionSyntax>();
 
+                                    List<MethodDeclarationSyntax> onChangedHandlers =
+                                        new List<MethodDeclarationSyntax>();
+
+                                    List<StatementSyntax> onNotifyHandlers =
+                                        new List<StatementSyntax>();
+
                                     HashSet<byte> ids = new HashSet<byte>();
 
                                     foreach (MemberDeclarationSyntax member in classWProp)
@@ -153,6 +159,19 @@ namespace OmniNetSourceGenerator
                                                     declarationType.ToString()
                                                 )
                                             );
+
+                                            onChangedHandlers.Add(
+                                                CreateHandler(
+                                                    propSyntax.Identifier.Text,
+                                                    declarationType.ToString()
+                                                )
+                                            );
+
+                                            onNotifyHandlers.Add(
+                                                SyntaxFactory.ParseStatement(
+                                                    $"{propSyntax.Identifier.Text} = m_{propSyntax.Identifier.Text};"
+                                                )
+                                            );
                                         }
                                         else if (member is FieldDeclarationSyntax fieldSyntax)
                                         {
@@ -175,6 +194,19 @@ namespace OmniNetSourceGenerator
                                                         id.ToString(),
                                                         variableName,
                                                         declarationType.ToString()
+                                                    )
+                                                );
+
+                                                onChangedHandlers.Add(
+                                                    CreateHandler(
+                                                        variableName,
+                                                        declarationType.ToString()
+                                                    )
+                                                );
+
+                                                onNotifyHandlers.Add(
+                                                    SyntaxFactory.ParseStatement(
+                                                        $"{variableName} = m_{variableName};"
                                                     )
                                                 );
                                             }
@@ -208,7 +240,7 @@ namespace OmniNetSourceGenerator
                                             .WithBody(
                                                 SyntaxFactory.Block(
                                                     SyntaxFactory.ParseStatement(
-                                                        "___OnPropertyChanged___(buffer, peer);"
+                                                        "___OnPropertyChanged___(default, default, peer, buffer);"
                                                     )
                                                 )
                                             );
@@ -235,7 +267,7 @@ namespace OmniNetSourceGenerator
                                             .WithBody(
                                                 SyntaxFactory.Block(
                                                     SyntaxFactory.ParseStatement(
-                                                        "___OnPropertyChanged___(buffer, default);"
+                                                        "___OnPropertyChanged___(default, default, default, buffer);"
                                                     )
                                                 )
                                             );
@@ -258,12 +290,22 @@ namespace OmniNetSourceGenerator
                                                     {
                                                         SyntaxFactory.Parameter(
                                                             SyntaxFactory.Identifier(
-                                                                "DataBuffer buffer"
+                                                                "string propertyName"
+                                                            )
+                                                        ),
+                                                        SyntaxFactory.Parameter(
+                                                            SyntaxFactory.Identifier(
+                                                                "byte propertyId"
                                                             )
                                                         ),
                                                         SyntaxFactory.Parameter(
                                                             SyntaxFactory.Identifier(
                                                                 "NetworkPeer peer"
+                                                            )
+                                                        ),
+                                                        SyntaxFactory.Parameter(
+                                                            SyntaxFactory.Identifier(
+                                                                "DataBuffer buffer"
                                                             )
                                                         )
                                                     }
@@ -273,7 +315,7 @@ namespace OmniNetSourceGenerator
                                         .WithBody(
                                             SyntaxFactory.Block(
                                                 SyntaxFactory.ParseStatement(
-                                                    "byte propertyId = buffer.Read<byte>();"
+                                                    "propertyId = buffer.Read<byte>();"
                                                 ),
                                                 SyntaxFactory
                                                     .SwitchStatement(
@@ -281,15 +323,37 @@ namespace OmniNetSourceGenerator
                                                     )
                                                     .WithSections(SyntaxFactory.List(sections)),
                                                 SyntaxFactory.ParseStatement(
-                                                    "base.___OnPropertyChanged___(buffer, peer);"
+                                                    "base.___OnPropertyChanged___(propertyName, propertyId, peer, buffer);"
                                                 )
+                                            )
+                                        );
+
+                                    MethodDeclarationSyntax onNotifyChange = SyntaxFactory
+                                        .MethodDeclaration(
+                                            SyntaxFactory.ParseTypeName("void"),
+                                            "___NotifyChange___"
+                                        )
+                                        .WithModifiers(
+                                            SyntaxFactory.TokenList(
+                                                SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
+                                                SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
+                                            )
+                                        )
+                                        .WithBody(
+                                            SyntaxFactory.Block(
+                                                SyntaxFactory.List(onNotifyHandlers)
                                             )
                                         );
 
                                     newClassSyntax = newClassSyntax.AddMembers(
                                         onServerPropertyChanged,
                                         onClientPropertyChanged,
-                                        onPropertyChanged
+                                        onPropertyChanged,
+                                        onNotifyChange
+                                    );
+
+                                    newClassSyntax = newClassSyntax.AddMembers(
+                                        onChangedHandlers.ToArray()
                                     );
 
                                     newNamespaceSyntax = newNamespaceSyntax.AddMembers(
@@ -367,7 +431,35 @@ namespace OmniNetSourceGenerator
             }
         }
 
-        private static SwitchSectionSyntax CreateSection(
+        private MethodDeclarationSyntax CreateHandler(string propertyName, string type)
+        {
+            return SyntaxFactory
+                .MethodDeclaration(SyntaxFactory.ParseTypeName("void"), $"On{propertyName}Changed")
+                .WithModifiers(
+                    SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PartialKeyword))
+                )
+                .WithParameterList(
+                    SyntaxFactory.ParameterList(
+                        SyntaxFactory.SeparatedList(
+                            new ParameterSyntax[]
+                            {
+                                SyntaxFactory
+                                    .Parameter(SyntaxFactory.Identifier($"prev{propertyName}"))
+                                    .WithType(SyntaxFactory.ParseTypeName(type)),
+                                SyntaxFactory
+                                    .Parameter(SyntaxFactory.Identifier($"next{propertyName}"))
+                                    .WithType(SyntaxFactory.ParseTypeName(type)),
+                                SyntaxFactory
+                                    .Parameter(SyntaxFactory.Identifier("isWriting"))
+                                    .WithType(SyntaxFactory.ParseTypeName("bool"))
+                            }
+                        )
+                    )
+                )
+                .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+        }
+
+        private SwitchSectionSyntax CreateSection(
             string caseExpression,
             string propertyName,
             string propertyType
@@ -384,9 +476,14 @@ namespace OmniNetSourceGenerator
                     new StatementSyntax[]
                     {
                         SyntaxFactory.Block(
+                            SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
                             SyntaxFactory.ParseStatement(
-                                $"m_{propertyName} = buffer.FromBinary<{propertyType}>();"
+                                $"var nextValue = buffer.FromBinary<{propertyType}>();"
                             ),
+                            SyntaxFactory.ParseStatement(
+                                $"On{propertyName}Changed(m_{propertyName}, nextValue, false);"
+                            ),
+                            SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;"),
                             SyntaxFactory.BreakStatement()
                         ),
                     }

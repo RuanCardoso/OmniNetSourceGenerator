@@ -83,6 +83,54 @@ namespace OmniNetSourceGenerator
 
                                     HashSet<byte> ids = new HashSet<byte>();
 
+                                    PropertyDeclarationSyntax staticDefaultSettings = SyntaxFactory
+                                        .PropertyDeclaration(
+                                            SyntaxFactory.ParseTypeName("NetworkVariableOptions"),
+                                            $"DefaultNetworkVariableOptions"
+                                        )
+                                        .WithModifiers(
+                                            SyntaxFactory.TokenList(
+                                                SyntaxFactory.Token(SyntaxKind.PrivateKeyword)
+                                            )
+                                        )
+                                        .WithAccessorList(
+                                            SyntaxFactory.AccessorList(
+                                                SyntaxFactory.List(
+                                                    new AccessorDeclarationSyntax[]
+                                                    {
+                                                        SyntaxFactory
+                                                            .AccessorDeclaration(
+                                                                SyntaxKind.GetAccessorDeclaration
+                                                            )
+                                                            .WithSemicolonToken(
+                                                                SyntaxFactory.Token(
+                                                                    SyntaxKind.SemicolonToken
+                                                                )
+                                                            ),
+                                                        SyntaxFactory
+                                                            .AccessorDeclaration(
+                                                                SyntaxKind.SetAccessorDeclaration
+                                                            )
+                                                            .WithSemicolonToken(
+                                                                SyntaxFactory.Token(
+                                                                    SyntaxKind.SemicolonToken
+                                                                )
+                                                            )
+                                                    }
+                                                )
+                                            )
+                                        )
+                                        .WithInitializer(
+                                            SyntaxFactory.EqualsValueClause(
+                                                SyntaxFactory.ParseExpression(
+                                                    "new NetworkVariableOptions()"
+                                                )
+                                            )
+                                        )
+                                        .WithSemicolonToken(
+                                            SyntaxFactory.Token(SyntaxKind.SemicolonToken)
+                                        );
+
                                     foreach (FieldDeclarationSyntax field in classWField)
                                     {
                                         byte id = 0;
@@ -211,34 +259,54 @@ namespace OmniNetSourceGenerator
                                             ids.Add(id);
                                             memberList.Add(
                                                 SyntaxFactory
-                                                    .FieldDeclaration(
-                                                        SyntaxFactory.VariableDeclaration(
-                                                            SyntaxFactory.ParseTypeName(
-                                                                $"SyncOptions"
-                                                            ),
-                                                            SyntaxFactory.SeparatedList(
-                                                                new VariableDeclaratorSyntax[]
-                                                                {
-                                                                    SyntaxFactory
-                                                                        .VariableDeclarator(
-                                                                            $"{variableName}Options"
-                                                                        )
-                                                                        .WithInitializer(
-                                                                            SyntaxFactory.EqualsValueClause(
-                                                                                SyntaxFactory.ParseExpression(
-                                                                                    $"SyncOptions.Default"
-                                                                                )
-                                                                            )
-                                                                        )
-                                                                }
-                                                            )
-                                                        )
+                                                    .PropertyDeclaration(
+                                                        SyntaxFactory.ParseTypeName(
+                                                            "NetworkVariableOptions"
+                                                        ),
+                                                        $"{variableName}Options"
                                                     )
                                                     .WithModifiers(
                                                         SyntaxFactory.TokenList(
                                                             SyntaxFactory.Token(
                                                                 SyntaxKind.PrivateKeyword
                                                             )
+                                                        )
+                                                    )
+                                                    .WithAccessorList(
+                                                        SyntaxFactory.AccessorList(
+                                                            SyntaxFactory.List(
+                                                                new AccessorDeclarationSyntax[]
+                                                                {
+                                                                    SyntaxFactory
+                                                                        .AccessorDeclaration(
+                                                                            SyntaxKind.GetAccessorDeclaration
+                                                                        )
+                                                                        .WithSemicolonToken(
+                                                                            SyntaxFactory.Token(
+                                                                                SyntaxKind.SemicolonToken
+                                                                            )
+                                                                        ),
+                                                                    SyntaxFactory
+                                                                        .AccessorDeclaration(
+                                                                            SyntaxKind.SetAccessorDeclaration
+                                                                        )
+                                                                        .WithSemicolonToken(
+                                                                            SyntaxFactory.Token(
+                                                                                SyntaxKind.SemicolonToken
+                                                                            )
+                                                                        )
+                                                                }
+                                                            )
+                                                        )
+                                                    )
+                                                    .WithInitializer(
+                                                        SyntaxFactory.EqualsValueClause(
+                                                            SyntaxFactory.ParseExpression("null")
+                                                        )
+                                                    )
+                                                    .WithSemicolonToken(
+                                                        SyntaxFactory.Token(
+                                                            SyntaxKind.SemicolonToken
                                                         )
                                                     )
                                             );
@@ -310,6 +378,9 @@ namespace OmniNetSourceGenerator
                                                                         .WithBody(
                                                                             SyntaxFactory.Block(
                                                                                 SyntaxFactory.ParseStatement(
+                                                                                    $"On{variableName}Changed(m_{variableName}, value, true);"
+                                                                                ),
+                                                                                SyntaxFactory.ParseStatement(
                                                                                     $"m_{variableName} = value;"
                                                                                 ),
                                                                                 baseClassName
@@ -321,7 +392,7 @@ namespace OmniNetSourceGenerator
                                                                                             ),
                                                                                             SyntaxFactory.Block(
                                                                                                 SyntaxFactory.ParseStatement(
-                                                                                                    $"Local.ManualSync({variableName}, {id}, {variableName}Options);"
+                                                                                                    $"Local.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"
                                                                                                 )
                                                                                             )
                                                                                         )
@@ -329,7 +400,7 @@ namespace OmniNetSourceGenerator
                                                                                             SyntaxFactory.ElseClause(
                                                                                                 SyntaxFactory.Block(
                                                                                                     SyntaxFactory.ParseStatement(
-                                                                                                        $"Remote.ManualSync({variableName}, {id}, {variableName}Options);"
+                                                                                                        $"Remote.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"
                                                                                                     )
                                                                                                 )
                                                                                             )
@@ -337,12 +408,12 @@ namespace OmniNetSourceGenerator
                                                                                     : baseClassName
                                                                                     == "ServerBehaviour"
                                                                                         ? SyntaxFactory.ParseStatement(
-                                                                                            $"Remote.ManualSync({variableName}, {id}, {variableName}Options);"
+                                                                                            $"Remote.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"
                                                                                         )
                                                                                         : baseClassName
                                                                                         == "ClientBehaviour"
                                                                                             ? SyntaxFactory.ParseStatement(
-                                                                                                $"Local.ManualSync({variableName}, {id}, {variableName}Options);"
+                                                                                                $"Local.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"
                                                                                             )
                                                                                             : null
                                                                             )
@@ -356,6 +427,8 @@ namespace OmniNetSourceGenerator
                                             id++;
                                         }
                                     }
+
+                                    memberList.Add(staticDefaultSettings);
 
                                     newClassSyntax = newClassSyntax.AddMembers(
                                         memberList.ToArray()
