@@ -9,14 +9,14 @@ namespace NamespaceTests
         [NetworkVariable(5)]
         private int m_Mana2;
 
-        private int m_MyLife3;
+        [NetworkVariable(34)]
+        private int m_Mana1,
+            m_Mana3,
+            m_Mana4,
+            m_Mana5;
 
-        [NetworkVariable(2)]
-        public int MyLife3
-        {
-            get { return m_MyLife3; }
-            set { m_MyLife3 = value; }
-        }
+        [NetworkVariable]
+        public int m_LifeZ;
 
         static void Main(string[] args) { }
     }
@@ -24,7 +24,7 @@ namespace NamespaceTests
 
 public class NetworkVariable : Attribute
 {
-    public NetworkVariable(bool track) { }
+    public NetworkVariable(bool track = false) { }
 
     public NetworkVariable(byte id) { }
 }

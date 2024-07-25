@@ -80,6 +80,8 @@ namespace OmniNetSourceGenerator
                                     List<SwitchSectionSyntax> sections =
                                         new List<SwitchSectionSyntax>();
 
+                                    HashSet<byte> ids = new HashSet<byte>();
+
                                     foreach (MemberDeclarationSyntax member in classWProp)
                                     {
                                         byte id = 0;
@@ -128,10 +130,22 @@ namespace OmniNetSourceGenerator
                                         }
 
                                         if (id <= 0)
-                                            continue;
+                                        {
+                                            id++;
+                                            while (ids.Contains(id))
+                                            {
+                                                id++;
+                                            }
+                                        }
 
                                         if (member is PropertyDeclarationSyntax propSyntax)
                                         {
+                                            while (ids.Contains(id))
+                                            {
+                                                id++;
+                                            }
+
+                                            ids.Add(id);
                                             sections.Add(
                                                 CreateSection(
                                                     id.ToString(),
@@ -142,11 +156,6 @@ namespace OmniNetSourceGenerator
                                         }
                                         else if (member is FieldDeclarationSyntax fieldSyntax)
                                         {
-                                            if (fieldSyntax.Declaration.Variables.Count > 1)
-                                            {
-                                                id = 150;
-                                            }
-
                                             foreach (
                                                 var variable in fieldSyntax.Declaration.Variables
                                             )
@@ -155,6 +164,12 @@ namespace OmniNetSourceGenerator
                                                 string variableName =
                                                     variable.Identifier.Text.Substring(2);
 
+                                                while (ids.Contains(id))
+                                                {
+                                                    id++;
+                                                }
+
+                                                ids.Add(id);
                                                 sections.Add(
                                                     CreateSection(
                                                         id.ToString(),
@@ -162,8 +177,6 @@ namespace OmniNetSourceGenerator
                                                         declarationType.ToString()
                                                     )
                                                 );
-
-                                                id++;
                                             }
                                         }
                                     }

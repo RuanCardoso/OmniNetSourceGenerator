@@ -85,6 +85,8 @@ namespace OmniNetSourceGenerator
                                     List<MemberDeclarationSyntax> memberList =
                                         new List<MemberDeclarationSyntax>();
 
+                                    HashSet<byte> ids = new HashSet<byte>();
+
                                     foreach (FieldDeclarationSyntax field in classWField)
                                     {
                                         byte id = 0;
@@ -132,11 +134,12 @@ namespace OmniNetSourceGenerator
                                         }
 
                                         if (id <= 0)
-                                            continue;
-
-                                        if (field.Declaration.Variables.Count > 1)
                                         {
-                                            id = 150;
+                                            id++;
+                                            while (ids.Contains(id))
+                                            {
+                                                id++;
+                                            }
                                         }
 
                                         if (baseClassName == "DualBehaviour")
@@ -207,6 +210,12 @@ namespace OmniNetSourceGenerator
                                                 return;
                                             }
 
+                                            while (ids.Contains(id))
+                                            {
+                                                id++;
+                                            }
+
+                                            ids.Add(id);
                                             memberList.Add(
                                                 SyntaxFactory
                                                     .FieldDeclaration(
