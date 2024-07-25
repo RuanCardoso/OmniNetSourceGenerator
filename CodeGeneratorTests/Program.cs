@@ -4,18 +4,29 @@ using System.Collections;
 
 namespace NamespaceTests
 {
-    public partial class Program : ServerBehaviour
+    public partial class Program : NetworkBehaviour
     {
-        [NetVar(1)]
-        private int m_Mana;
+        [NetworkVariable(5)]
+        private int m_Mana2;
+
+        private int m_MyLife3;
+
+        [NetworkVariable(2)]
+        public int MyLife3
+        {
+            get { return m_MyLife3; }
+            set { m_MyLife3 = value; }
+        }
 
         static void Main(string[] args) { }
     }
 }
 
-public class NetVar : Attribute
+public class NetworkVariable : Attribute
 {
-    public NetVar(byte id) { }
+    public NetworkVariable(bool track) { }
+
+    public NetworkVariable(byte id) { }
 }
 
 public class ServerBehaviour

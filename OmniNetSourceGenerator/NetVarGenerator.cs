@@ -93,7 +93,7 @@ namespace OmniNetSourceGenerator
                                                 x.Attributes.Where(y =>
                                                     y.ArgumentList != null
                                                     && y.ArgumentList.Arguments.Count > 0
-                                                    && y.Name.ToString() == "NetVar"
+                                                    && y.Name.ToString() == "NetworkVariable"
                                                 )
                                         );
 
@@ -126,6 +126,9 @@ namespace OmniNetSourceGenerator
                                                 }
                                             }
                                         }
+
+                                        if (id <= 0)
+                                            continue;
 
                                         if (member is PropertyDeclarationSyntax propSyntax)
                                         {
@@ -430,7 +433,7 @@ namespace OmniNetSourceGenerator
             {
                 if (
                     propSyntax.AttributeLists.Any(x =>
-                        x.Attributes.Any(y => y.Name.ToString() == "NetVar")
+                        x.Attributes.Any(y => y.Name.ToString() == "NetworkVariable")
                     )
                 )
                 {

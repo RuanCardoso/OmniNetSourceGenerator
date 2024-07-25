@@ -97,7 +97,7 @@ namespace OmniNetSourceGenerator
                                             x.Attributes.Where(y =>
                                                 y.ArgumentList != null
                                                 && y.ArgumentList.Arguments.Count > 0
-                                                && y.Name.ToString() == "NetVar"
+                                                && y.Name.ToString() == "NetworkVariable"
                                             )
                                         );
 
@@ -130,6 +130,9 @@ namespace OmniNetSourceGenerator
                                                 }
                                             }
                                         }
+
+                                        if (id <= 0)
+                                            continue;
 
                                         if (field.Declaration.Variables.Count > 1)
                                         {
@@ -254,7 +257,7 @@ namespace OmniNetSourceGenerator
                                                                         {
                                                                             SyntaxFactory.Attribute(
                                                                                 SyntaxFactory.ParseName(
-                                                                                    $"NetVar"
+                                                                                    $"NetworkVariable"
                                                                                 ),
                                                                                 SyntaxFactory.AttributeArgumentList(
                                                                                     SyntaxFactory.SeparatedList(
@@ -447,7 +450,7 @@ namespace OmniNetSourceGenerator
             {
                 if (
                     fieldSyntax.AttributeLists.Any(x =>
-                        x.Attributes.Any(y => y.Name.ToString() == "NetVar")
+                        x.Attributes.Any(y => y.Name.ToString() == "NetworkVariable")
                     )
                 )
                 {
