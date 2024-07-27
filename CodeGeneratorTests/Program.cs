@@ -10,7 +10,7 @@ namespace Omni.Net
 
 public class NetworkManager
 {
-    public ISerializable SharedPeer;
+    public static NetworkPeer SharedPeer;
 }
 
 public interface ISerializable { }
