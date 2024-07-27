@@ -526,7 +526,7 @@ namespace OmniNetSourceGenerator
                             SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
                             isSerializable
                                 ? SyntaxFactory.ParseStatement(
-                                    $"var nextValue = buffer.Deserialize<{propertyType}>(NetworkManager.SharedPeer, {isServer});"
+                                    $"var nextValue = buffer.Deserialize<{propertyType}>(peer, {isServer});"
                                 )
                                 : SyntaxFactory.ParseStatement(
                                     $"var nextValue = buffer.ReadAsBinary<{propertyType}>();"
