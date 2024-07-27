@@ -33,6 +33,7 @@ namespace OmniNetSourceGenerator
                             #region Usings
                             StringBuilder sb = new StringBuilder();
                             sb.AppendLine("#nullable disable");
+                            sb.AppendLine("#pragma warning disable");
                             sb.AppendLine("using Newtonsoft.Json;");
                             sb.AppendLine("using MemoryPack;");
 
@@ -59,6 +60,24 @@ namespace OmniNetSourceGenerator
                                     )
                                 )
                                 {
+                                    string baseClassName = currentClassSyntax
+                                        .BaseList.Types[0]
+                                        .ToString();
+
+                                    string isServer = "false";
+                                    if (baseClassName == "NetworkBehaviour")
+                                    {
+                                        isServer = "IsServer";
+                                    }
+                                    else if (baseClassName == "ServerBehaviour")
+                                    {
+                                        isServer = "true";
+                                    }
+                                    else
+                                    {
+                                        isServer = "false";
+                                    }
+
                                     NamespaceDeclarationSyntax currentNamespaceSyntax =
                                         currentClassSyntax.Parent
                                             is NamespaceDeclarationSyntax @namespace
@@ -95,6 +114,14 @@ namespace OmniNetSourceGenerator
                                             is FieldDeclarationSyntax field
                                             ? field.Declaration.Type
                                             : ((PropertyDeclarationSyntax)member).Type;
+
+                                        SemanticModel model = context.Compilation.GetSemanticModel(
+                                            member.SyntaxTree
+                                        );
+
+                                        bool isSerializable = IsSerializable(
+                                            model.GetTypeInfo(declarationType).Type
+                                        );
 
                                         var attributeSyntaxes = member.AttributeLists.SelectMany(
                                             x =>
@@ -156,7 +183,9 @@ namespace OmniNetSourceGenerator
                                                 CreateSection(
                                                     id.ToString(),
                                                     propSyntax.Identifier.Text,
-                                                    declarationType.ToString()
+                                                    declarationType.ToString(),
+                                                    isSerializable,
+                                                    isServer
                                                 )
                                             );
 
@@ -193,7 +222,9 @@ namespace OmniNetSourceGenerator
                                                     CreateSection(
                                                         id.ToString(),
                                                         variableName,
-                                                        declarationType.ToString()
+                                                        declarationType.ToString(),
+                                                        isSerializable,
+                                                        isServer
                                                     )
                                                 );
 
@@ -431,6 +462,20 @@ namespace OmniNetSourceGenerator
             }
         }
 
+        private bool IsSerializable(ITypeSymbol typeSymbol)
+        {
+            if (typeSymbol != null)
+            {
+                var interfaces = typeSymbol.Interfaces;
+
+                return interfaces.Any(x =>
+                    x.Name == "ISerializableWithPeer" || x.Name == "ISerializable"
+                );
+            }
+
+            return false;
+        }
+
         private MethodDeclarationSyntax CreateHandler(string propertyName, string type)
         {
             return SyntaxFactory
@@ -462,7 +507,9 @@ namespace OmniNetSourceGenerator
         private SwitchSectionSyntax CreateSection(
             string caseExpression,
             string propertyName,
-            string propertyType
+            string propertyType,
+            bool isSerializable,
+            string isServer
         )
         {
             return SyntaxFactory.SwitchSection(
@@ -477,9 +524,13 @@ namespace OmniNetSourceGenerator
                     {
                         SyntaxFactory.Block(
                             SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
-                            SyntaxFactory.ParseStatement(
-                                $"var nextValue = buffer.FromBinary<{propertyType}>();"
-                            ),
+                            isSerializable
+                                ? SyntaxFactory.ParseStatement(
+                                    $"var nextValue = buffer.Deserialize<{propertyType}>(NetworkManager.SharedPeer, {isServer});"
+                                )
+                                : SyntaxFactory.ParseStatement(
+                                    $"var nextValue = buffer.ReadAsBinary<{propertyType}>();"
+                                ),
                             SyntaxFactory.ParseStatement(
                                 $"On{propertyName}Changed(m_{propertyName}, nextValue, false);"
                             ),

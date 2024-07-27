@@ -32,6 +32,7 @@ namespace OmniNetSourceGenerator
                             #region Usings
                             StringBuilder sb = new StringBuilder();
                             sb.AppendLine("#nullable disable");
+                            sb.AppendLine("#pragma warning disable");
 
                             IEnumerable<UsingDirectiveSyntax> usingSyntaxes = currentClassSyntax
                                 .SyntaxTree.GetRoot()

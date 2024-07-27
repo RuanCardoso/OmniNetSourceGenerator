@@ -1,46 +1,35 @@
 ﻿#nullable disable
 
 using System.Collections;
+using Omni.Net;
+
+namespace Omni.Net
+{
+    public class Aaaa : ISerializable { }
+}
+
+public class NetworkManager
+{
+    public ISerializable SharedPeer;
+}
+
+public interface ISerializable { }
 
 namespace NamespaceTests
 {
     public partial class Program : ServerBehaviour
     {
-        private int m_Hel;
+        [NetworkVariable]
+        private Aaaa m_Hel;
+
+        private int m_Mana;
 
         [NetworkVariable]
-        public int Hel
+        public int Mana
         {
-            get { return m_Hel; }
-            set { m_Hel = value; }
+            get { return m_Mana; }
+            set { m_Mana = value; }
         }
-
-        [NetworkVariable]
-        public int MyLifeN
-        {
-            get { return m_MyLifeN; }
-            set { m_MyLifeN = value; }
-        }
-
-        [NetworkVariable]
-        public Dictionary<int, string> MyLifeTests
-        {
-            get => m_MyLifeTests;
-            set => m_MyLifeTests = value;
-        }
-
-        private Dictionary<int, string> m_MyLifeTests;
-
-        [NetworkVariable(76)]
-        private int m_Mana2;
-
-        [NetworkVariable(128)]
-        private int m_Mana1,
-            m_Mana3,
-            m_Mana4,
-            m_Mana5;
-
-        private int m_MyLifeN;
 
         static void Main(string[] args) { }
     }
@@ -75,14 +64,14 @@ public class ServerBehaviour
 
 public class ClientBehaviour
 {
-    protected virtual void ___NotifyChange___() { }
-
     protected virtual void ___OnPropertyChanged___(
         string propertyName,
         byte propertyId,
         NetworkPeer peer,
         DataBuffer buffer
     ) { }
+
+    protected virtual void ___NotifyChange___() { }
 
     public class Event
     {
@@ -95,14 +84,14 @@ public class ClientBehaviour
 
 public class DualBehaviour
 {
-    protected virtual void ___NotifyChange___() { }
-
     protected virtual void ___OnPropertyChanged___(
         string propertyName,
         byte propertyId,
         NetworkPeer peer,
         DataBuffer buffer
     ) { }
+
+    protected virtual void ___NotifyChange___() { }
 
     public class Event
     {
@@ -116,8 +105,16 @@ public class DualBehaviour
 public class NetworkBehaviour : NetVarBehaviour
 {
     public bool IsMine => false;
+    public bool IsServer => false;
 
-    protected virtual void ___OnPropertyChanged___(DataBuffer buffer, NetworkPeer peer) { }
+    protected virtual void ___OnPropertyChanged___(
+        string propertyName,
+        byte propertyId,
+        NetworkPeer peer,
+        DataBuffer buffer
+    ) { }
+
+    protected virtual void ___NotifyChange___() { }
 
     public class Event
     {
@@ -146,7 +143,12 @@ public class DataBuffer
         return default;
     }
 
-    public T FromBinary<T>()
+    public T ReadAsBinary<T>()
+    {
+        return default;
+    }
+
+    public T Deserialize<T>(NetworkPeer peer, bool IsServer)
     {
         return default;
     }
