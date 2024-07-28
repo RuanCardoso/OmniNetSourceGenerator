@@ -120,7 +120,8 @@ namespace OmniNetSourceGenerator
                                         );
 
                                         bool isSerializable = IsSerializable(
-                                            model.GetTypeInfo(declarationType).Type
+                                            model.GetTypeInfo(declarationType).Type,
+                                            out bool withPeer
                                         );
 
                                         var attributeSyntaxes = member.AttributeLists.SelectMany(
@@ -185,6 +186,7 @@ namespace OmniNetSourceGenerator
                                                     propSyntax.Identifier.Text,
                                                     declarationType.ToString(),
                                                     isSerializable,
+                                                    withPeer,
                                                     isServer
                                                 )
                                             );
@@ -224,6 +226,7 @@ namespace OmniNetSourceGenerator
                                                         variableName,
                                                         declarationType.ToString(),
                                                         isSerializable,
+                                                        withPeer,
                                                         isServer
                                                     )
                                                 );
@@ -462,12 +465,14 @@ namespace OmniNetSourceGenerator
             }
         }
 
-        private bool IsSerializable(ITypeSymbol typeSymbol)
+        private bool IsSerializable(ITypeSymbol typeSymbol, out bool withPeer)
         {
+            withPeer = false;
             if (typeSymbol != null)
             {
                 var interfaces = typeSymbol.Interfaces;
 
+                withPeer = interfaces.Any(x => x.Name == "ISerializableWithPeer");
                 return interfaces.Any(x =>
                     x.Name == "ISerializableWithPeer" || x.Name == "ISerializable"
                 );
@@ -509,37 +514,74 @@ namespace OmniNetSourceGenerator
             string propertyName,
             string propertyType,
             bool isSerializable,
+            bool isSerializableWithPeer,
             string isServer
         )
         {
-            return SyntaxFactory.SwitchSection(
-                SyntaxFactory.List(
-                    new SwitchLabelSyntax[]
-                    {
-                        SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(caseExpression))
-                    }
-                ),
-                SyntaxFactory.List(
-                    new StatementSyntax[]
-                    {
-                        SyntaxFactory.Block(
-                            SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
-                            isSerializable
-                                ? SyntaxFactory.ParseStatement(
-                                    $"var nextValue = buffer.Deserialize<{propertyType}>(peer != null ? peer : NetworkManager.LocalPeer, {isServer});"
-                                )
-                                : SyntaxFactory.ParseStatement(
+            return !isSerializable
+                ? SyntaxFactory.SwitchSection(
+                    SyntaxFactory.List(
+                        new SwitchLabelSyntax[]
+                        {
+                            SyntaxFactory.CaseSwitchLabel(
+                                SyntaxFactory.ParseExpression(caseExpression)
+                            )
+                        }
+                    ),
+                    SyntaxFactory.List(
+                        new StatementSyntax[]
+                        {
+                            SyntaxFactory.Block(
+                                SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
+                                SyntaxFactory.ParseStatement(
                                     $"var nextValue = buffer.ReadAsBinary<{propertyType}>();"
                                 ),
-                            SyntaxFactory.ParseStatement(
-                                $"On{propertyName}Changed(m_{propertyName}, nextValue, false);"
+                                SyntaxFactory.ParseStatement(
+                                    $"On{propertyName}Changed(m_{propertyName}, nextValue, false);"
+                                ),
+                                SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;"),
+                                SyntaxFactory.BreakStatement()
                             ),
-                            SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;"),
-                            SyntaxFactory.BreakStatement()
-                        ),
-                    }
-                )
-            );
+                        }
+                    )
+                ) // Start of deserialize
+                : SyntaxFactory.SwitchSection(
+                    SyntaxFactory.List(
+                        new SwitchLabelSyntax[]
+                        {
+                            SyntaxFactory.CaseSwitchLabel(
+                                SyntaxFactory.ParseExpression(caseExpression)
+                            )
+                        }
+                    ),
+                    SyntaxFactory.List(
+                        new StatementSyntax[]
+                        {
+                            SyntaxFactory.Block(
+                                SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
+                                SyntaxFactory.ParseStatement(
+                                    "using var nBuffer = NetworkManager.Pool.Rent();"
+                                ),
+                                SyntaxFactory.ParseStatement(
+                                    "nBuffer.RawWrite(buffer.GetSpan().Slice(0, buffer.Length)); // from current position to end > skip propertyId(header)"
+                                ),
+                                SyntaxFactory.ParseStatement($"nBuffer.SeekToBegin();"),
+                                isSerializableWithPeer
+                                    ? SyntaxFactory.ParseStatement(
+                                        $"var nextValue = nBuffer.Deserialize<{propertyType}>(peer != null ? peer : NetworkManager.LocalPeer, {isServer});"
+                                    )
+                                    : SyntaxFactory.ParseStatement(
+                                        $"var nextValue = nBuffer.Deserialize<{propertyType}>();"
+                                    ),
+                                SyntaxFactory.ParseStatement(
+                                    $"On{propertyName}Changed(m_{propertyName}, nextValue, false);"
+                                ),
+                                SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;"),
+                                SyntaxFactory.BreakStatement()
+                            ),
+                        }
+                    )
+                );
         }
 
         private MethodDeclarationSyntax CreatePropertyMethod(

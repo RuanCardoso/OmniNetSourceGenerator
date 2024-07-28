@@ -12,9 +12,20 @@ public class NetworkManager
 {
     public static NetworkPeer SharedPeer;
     public static NetworkPeer LocalPeer;
+    public static NPool Pool;
+}
+
+public class NPool()
+{
+    public DataBuffer Rent()
+    {
+        return default;
+    }
 }
 
 public interface ISerializable { }
+
+public interface ISerializableWithPeer { }
 
 namespace NamespaceTests
 {
@@ -137,8 +148,10 @@ namespace Newtonsoft.Json { }
 
 public class NetworkPeer { }
 
-public class DataBuffer
+public class DataBuffer : IDisposable
 {
+    public int Length { get; set; }
+
     public T Read<T>()
     {
         return default;
@@ -153,6 +166,27 @@ public class DataBuffer
     {
         return default;
     }
+
+    public T Deserialize<T>()
+    {
+        return default;
+    }
+
+    public void CopyTo(DataBuffer buffer) { }
+
+    public void RawWrite(Span<byte> data) { }
+
+    public Span<byte> GetSpan()
+    {
+        return default;
+    }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void SeekToBegin() { }
 }
 
 public class Server : Attribute
