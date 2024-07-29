@@ -28,6 +28,9 @@ public partial class Player : PlayerBase
     [NetworkVariable]
     private float m_Nkol = 100;
 
+    [NetworkVariable(15)]
+    private float m_Nkol2 = 100;
+
     private void Update()
     {
         if (IsServer)

@@ -168,6 +168,14 @@ namespace OmniNetSourceGenerator
                                             }
                                         }
 
+                                        if (baseClassName.Contains("Base"))
+                                        {
+                                            if (id <= 0)
+                                            {
+                                                id = 101;
+                                            }
+                                        }
+
                                         if (id <= 0)
                                         {
                                             id++;
