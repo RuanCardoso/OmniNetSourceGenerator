@@ -208,6 +208,12 @@ namespace OmniNetSourceGenerator
                                                     $"{propSyntax.Identifier.Text} = m_{propSyntax.Identifier.Text};"
                                                 )
                                             );
+
+                                            onNotifyHandlers.Add(
+                                                SyntaxFactory.ParseStatement(
+                                                    $"base.___NotifyChange___();"
+                                                )
+                                            );
                                         }
                                         else if (member is FieldDeclarationSyntax fieldSyntax)
                                         {
@@ -248,13 +254,19 @@ namespace OmniNetSourceGenerator
                                                         $"{variableName} = m_{variableName};"
                                                     )
                                                 );
+
+                                                onNotifyHandlers.Add(
+                                                    SyntaxFactory.ParseStatement(
+                                                        $"base.___NotifyChange___();"
+                                                    )
+                                                );
                                             }
                                         }
                                     }
 
                                     MethodDeclarationSyntax onServerPropertyChanged =
                                         CreatePropertyMethod(
-                                                "___OnServerPropertyChanged___",
+                                                $"___OnServerPropertyChanged___{currentClassSyntax.Identifier.Text}___",
                                                 "Server"
                                             )
                                             .WithParameterList(
@@ -286,7 +298,7 @@ namespace OmniNetSourceGenerator
 
                                     MethodDeclarationSyntax onClientPropertyChanged =
                                         CreatePropertyMethod(
-                                                "___OnClientPropertyChanged___",
+                                                $"___OnClientPropertyChanged___{currentClassSyntax.Identifier.Text}___",
                                                 "Client"
                                             )
                                             .WithParameterList(
@@ -361,6 +373,9 @@ namespace OmniNetSourceGenerator
                                                         SyntaxFactory.ParseExpression("propertyId")
                                                     )
                                                     .WithSections(SyntaxFactory.List(sections)),
+                                                SyntaxFactory.ParseStatement(
+                                                    "buffer.SeekToBegin();"
+                                                ),
                                                 SyntaxFactory.ParseStatement(
                                                     "base.___OnPropertyChanged___(propertyName, propertyId, peer, buffer);"
                                                 )

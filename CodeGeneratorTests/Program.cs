@@ -8,6 +8,36 @@ namespace Omni.Net
     public class Aaaa : ISerializable { }
 }
 
+public partial class PlayerBase : NetworkBehaviour
+{
+    [NetworkVariable]
+    private float m_Health = 100;
+
+    // private void Update()
+    // {
+    //     if (IsServer)
+    //     {
+    //         //Nkol++;
+    //         Health++;
+    //     }
+    // }
+}
+
+public partial class Player : PlayerBase
+{
+    [NetworkVariable]
+    private float m_Nkol = 100;
+
+    private void Update()
+    {
+        if (IsServer)
+        {
+            //Nkol++;
+            Health++;
+        }
+    }
+}
+
 public class NetworkManager
 {
     public static NetworkPeer SharedPeer;
@@ -33,17 +63,17 @@ namespace NamespaceTests
 
     public partial class Program : PlayerBase
     {
-        [NetworkVariable]
-        private Aaaa m_Hel;
+        // [NetworkVariable]
+        // private Aaaa m_Hel;
 
-        private int m_Mana;
+        // private int m_Mana;
 
-        [NetworkVariable]
-        public int Mana
-        {
-            get { return m_Mana; }
-            set { m_Mana = value; }
-        }
+        // [NetworkVariable]
+        // public int Mana
+        // {
+        //     get { return m_Mana; }
+        //     set { m_Mana = value; }
+        // }
 
         static void Main(string[] args) { }
     }
