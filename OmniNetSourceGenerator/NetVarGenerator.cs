@@ -54,6 +54,7 @@ namespace OmniNetSourceGenerator
                                     currentClassSyntax.BaseList != null
                                     && currentClassSyntax.BaseList.Types.Any(x =>
                                         x.ToString() == "NetworkBehaviour"
+                                        || x.ToString().Contains("Base") // Base is for networkbehaviour(identified by Base)
                                         || x.ToString() == "DualBehaviour"
                                         || x.ToString() == "ClientBehaviour"
                                         || x.ToString() == "ServerBehaviour"
@@ -73,9 +74,13 @@ namespace OmniNetSourceGenerator
                                     {
                                         isServer = "true";
                                     }
-                                    else
+                                    else if (baseClassName == "ClientBehaviour")
                                     {
                                         isServer = "false";
+                                    }
+                                    else
+                                    {
+                                        isServer = "IsServer";
                                     }
 
                                     NamespaceDeclarationSyntax currentNamespaceSyntax =
@@ -615,6 +620,9 @@ namespace OmniNetSourceGenerator
                             )
                         }
                     )
+                )
+                .WithModifiers(
+                    SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword))
                 );
 
             return onPropertyChanged;

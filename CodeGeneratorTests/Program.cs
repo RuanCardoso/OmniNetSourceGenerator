@@ -29,7 +29,9 @@ public interface ISerializableWithPeer { }
 
 namespace NamespaceTests
 {
-    public partial class Program : ServerBehaviour
+    public class PlayerBase : NetworkBehaviour { }
+
+    public partial class Program : PlayerBase
     {
         [NetworkVariable]
         private Aaaa m_Hel;
