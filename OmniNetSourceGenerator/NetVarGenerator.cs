@@ -211,6 +211,14 @@ namespace OmniNetSourceGenerator
                                                 )
                                             );
 
+                                            onChangedHandlers.Add(
+                                                CreateSyncMethod(
+                                                    propSyntax.Identifier.Text,
+                                                    id.ToString(),
+                                                    baseClassName
+                                                )
+                                            );
+
                                             onNotifyHandlers.Add(
                                                 SyntaxFactory.ParseStatement(
                                                     $"{propSyntax.Identifier.Text} = m_{propSyntax.Identifier.Text};"
@@ -254,6 +262,14 @@ namespace OmniNetSourceGenerator
                                                     CreateHandler(
                                                         variableName,
                                                         declarationType.ToString()
+                                                    )
+                                                );
+
+                                                onChangedHandlers.Add(
+                                                    CreateSyncMethod(
+                                                        variableName,
+                                                        id.ToString(),
+                                                        baseClassName
                                                     )
                                                 );
 
@@ -507,6 +523,69 @@ namespace OmniNetSourceGenerator
             }
 
             return false;
+        }
+
+        private MethodDeclarationSyntax CreateSyncMethod(
+            string propertyName,
+            string propertyId,
+            string baseClassName
+        )
+        {
+            return SyntaxFactory
+                .MethodDeclaration(SyntaxFactory.ParseTypeName("void"), $"Sync{propertyName}")
+                .WithModifiers(
+                    SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword))
+                )
+                .WithParameterList(
+                    SyntaxFactory.ParameterList(
+                        SyntaxFactory.SeparatedList(
+                            new ParameterSyntax[]
+                            {
+                                SyntaxFactory
+                                    .Parameter(SyntaxFactory.Identifier($"options"))
+                                    .WithType(SyntaxFactory.ParseTypeName("NetworkVariableOptions"))
+                            }
+                        )
+                    )
+                )
+                .WithBody(
+                    SyntaxFactory.Block(
+                        SyntaxFactory.ParseStatement("options ??= new();"),
+                        (baseClassName == "NetworkBehaviour" || baseClassName.Contains("Base"))
+                            ? SyntaxFactory
+                                .IfStatement(
+                                    SyntaxFactory.ParseExpression("IsMine"),
+                                    SyntaxFactory.Block(
+                                        SyntaxFactory.ParseStatement(
+                                            $"Local.ManualSync({propertyName}, {propertyId}, options);"
+                                        )
+                                    )
+                                )
+                                .WithElse(
+                                    SyntaxFactory.ElseClause(
+                                        SyntaxFactory.Block(
+                                            SyntaxFactory.IfStatement(
+                                                SyntaxFactory.ParseExpression("IsServer"),
+                                                SyntaxFactory.Block(
+                                                    SyntaxFactory.ParseStatement(
+                                                        $"Remote.ManualSync({propertyName}, {propertyId}, options);"
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            : baseClassName == "ServerBehaviour"
+                                ? SyntaxFactory.ParseStatement(
+                                    $"Remote.ManualSync({propertyName}, {propertyId}, options);"
+                                )
+                                : baseClassName == "ClientBehaviour"
+                                    ? SyntaxFactory.ParseStatement(
+                                        $"Local.ManualSync({propertyName}, {propertyId}, options);"
+                                    )
+                                    : null
+                    )
+                );
         }
 
         private MethodDeclarationSyntax CreateHandler(string propertyName, string type)

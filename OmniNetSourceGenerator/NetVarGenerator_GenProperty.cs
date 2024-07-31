@@ -414,8 +414,15 @@ namespace OmniNetSourceGenerator
                                                                                         .WithElse(
                                                                                             SyntaxFactory.ElseClause(
                                                                                                 SyntaxFactory.Block(
-                                                                                                    SyntaxFactory.ParseStatement(
-                                                                                                        $"Remote.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"
+                                                                                                    SyntaxFactory.IfStatement(
+                                                                                                        SyntaxFactory.ParseExpression(
+                                                                                                            "IsServer"
+                                                                                                        ),
+                                                                                                        SyntaxFactory.Block(
+                                                                                                            SyntaxFactory.ParseStatement(
+                                                                                                                $"Remote.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"
+                                                                                                            )
+                                                                                                        )
                                                                                                     )
                                                                                                 )
                                                                                             )

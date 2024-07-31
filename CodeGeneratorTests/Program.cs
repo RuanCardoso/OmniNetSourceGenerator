@@ -8,37 +8,22 @@ namespace Omni.Net
     public class Aaaa : ISerializable { }
 }
 
-public partial class PlayerBase : NetworkBehaviour
+// public partial class PlayerBase : NetworkBehaviour
+// {
+//     private int m_Healt;
+
+//     [NetworkVariable]
+//     public int Healt
+//     {
+//         get { return m_Healt; }
+//         set { m_Healt = value; }
+//     }
+// }
+
+public partial class Player : NetworkBehaviour
 {
     [NetworkVariable]
-    private float m_Health = 100;
-
-    // private void Update()
-    // {
-    //     if (IsServer)
-    //     {
-    //         //Nkol++;
-    //         Health++;
-    //     }
-    // }
-}
-
-public partial class Player : PlayerBase
-{
-    [NetworkVariable]
-    private float m_Nkol = 100;
-
-    [NetworkVariable(15)]
-    private float m_Nkol2 = 100;
-
-    private void Update()
-    {
-        if (IsServer)
-        {
-            //Nkol++;
-            Health++;
-        }
-    }
+    private int m_Healt;
 }
 
 public class NetworkManager
