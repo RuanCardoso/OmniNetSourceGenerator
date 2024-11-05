@@ -516,9 +516,9 @@ namespace OmniNetSourceGenerator
             {
                 var interfaces = typeSymbol.Interfaces;
 
-                withPeer = interfaces.Any(x => x.Name == "ISerializableWithPeer");
+                withPeer = interfaces.Any(x => x.Name == "IMessageWithPeer");
                 return interfaces.Any(x =>
-                    x.Name == "ISerializableWithPeer" || x.Name == "ISerializable"
+                    x.Name == "IMessageWithPeer" || x.Name == "IMessage"
                 );
             }
 

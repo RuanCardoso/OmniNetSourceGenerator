@@ -5,7 +5,7 @@ using Omni.Net;
 
 namespace Omni.Net
 {
-    public class Aaaa : ISerializable { }
+    public class Aaaa : IMessage { }
 }
 
 // public partial class PlayerBase : NetworkBehaviour
@@ -41,9 +41,9 @@ public class NPool()
     }
 }
 
-public interface ISerializable { }
+public interface IMessage { }
 
-public interface ISerializableWithPeer { }
+public interface IMessageWithPeer { }
 
 namespace NamespaceTests
 {
