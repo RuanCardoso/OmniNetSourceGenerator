@@ -23,7 +23,21 @@ namespace Omni.Net
 public partial class Player : NetworkBehaviour
 {
     [NetworkVariable]
-    private int m_Healt;
+    private int m_Health;
+
+	[NetworkVariable]
+	private int m_Health2;
+
+	[NetworkVariable]
+	private int m_Health3;
+
+	[NetworkVariable]
+	private Dictionary<string, int> m_Hea;
+
+	void a()
+    {
+        Health = 1;
+    }
 }
 
 public class NetworkManager
