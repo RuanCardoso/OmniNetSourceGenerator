@@ -391,6 +391,9 @@ namespace OmniNetSourceGenerator
 																					$"On{variableName}Changed(m_{variableName}, value, true);"
 																				),
 																				SyntaxFactory.ParseStatement(
+																					$"OnBase{variableName}Changed(m_{variableName}, value, true);"
+																				),
+																				SyntaxFactory.ParseStatement(
 																					$"m_{variableName} = value;"
 																				),
 																				(

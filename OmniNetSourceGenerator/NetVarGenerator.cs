@@ -212,6 +212,13 @@ namespace OmniNetSourceGenerator
 											);
 
 											onChangedHandlers.Add(
+												CreateVirtualHandler(
+													propSyntax.Identifier.Text,
+													declarationType.ToString()
+												)
+											);
+
+											onChangedHandlers.Add(
 												CreateSyncMethod(
 													propSyntax.Identifier.Text,
 													id.ToString(),
@@ -254,6 +261,13 @@ namespace OmniNetSourceGenerator
 
 												onChangedHandlers.Add(
 													CreateHandler(
+														variableName,
+														declarationType.ToString()
+													)
+												);
+
+												onChangedHandlers.Add(
+													CreateVirtualHandler(
 														variableName,
 														declarationType.ToString()
 													)
@@ -612,6 +626,34 @@ namespace OmniNetSourceGenerator
 				.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
 		}
 
+		private MethodDeclarationSyntax CreateVirtualHandler(string propertyName, string type)
+		{
+			return SyntaxFactory
+				.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), $"OnBase{propertyName}Changed")
+				.WithModifiers(
+					SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword), SyntaxFactory.Token(SyntaxKind.VirtualKeyword))
+				)
+				.WithParameterList(
+					SyntaxFactory.ParameterList(
+						SyntaxFactory.SeparatedList(
+							new ParameterSyntax[]
+							{
+								SyntaxFactory
+									.Parameter(SyntaxFactory.Identifier($"prev{propertyName}"))
+									.WithType(SyntaxFactory.ParseTypeName(type)),
+								SyntaxFactory
+									.Parameter(SyntaxFactory.Identifier($"next{propertyName}"))
+									.WithType(SyntaxFactory.ParseTypeName(type)),
+								SyntaxFactory
+									.Parameter(SyntaxFactory.Identifier("isWriting"))
+									.WithType(SyntaxFactory.ParseTypeName("bool"))
+							}
+						)
+					)
+				).
+				WithBody(SyntaxFactory.Block());
+		}
+
 		private SwitchSectionSyntax CreateSection(
 			string caseExpression,
 			string propertyName,
@@ -641,6 +683,9 @@ namespace OmniNetSourceGenerator
 								),
 								SyntaxFactory.ParseStatement(
 									$"On{propertyName}Changed(m_{propertyName}, nextValue, false);"
+								),
+								SyntaxFactory.ParseStatement(
+									$"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"
 								),
 								SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;"),
 								SyntaxFactory.BreakStatement()
@@ -678,6 +723,9 @@ namespace OmniNetSourceGenerator
 									),
 								SyntaxFactory.ParseStatement(
 									$"On{propertyName}Changed(m_{propertyName}, nextValue, false);"
+								),
+								SyntaxFactory.ParseStatement(
+									$"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"
 								),
 								SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;"),
 								SyntaxFactory.BreakStatement()
