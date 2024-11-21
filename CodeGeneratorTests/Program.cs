@@ -180,9 +180,14 @@ public class NetworkBehaviour : NetVarBehaviour
 	/// <param name="oldValue">The old value to compare.</param>
 	/// <param name="newValue">The new value to compare.</param>
 	/// <returns>True if the values are deeply equal; otherwise, false.</returns>
-	protected bool DeepEquals<T>(T oldValue, T newValue , string name)
+	protected bool DeepEquals<T>(T oldValue, T newValue, string name)
 	{
 		return true;
+	}
+
+	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name)
+	{
+		return false;
 	}
 
 	public class Event

@@ -387,7 +387,7 @@ namespace OmniNetSourceGenerator
 																		)
 																		.WithBody(
 																			SyntaxFactory.Block(
-																				SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"DeepEquals(m_{variableName}, value, nameof(m_{variableName}))"), SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;"))),
+																				SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"DeepEquals(m_{variableName}, value, \"{variableName}\")"), SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;"))),
 																				SyntaxFactory.ParseStatement(
 																					$"On{variableName}Changed(m_{variableName}, value, true);"
 																				),

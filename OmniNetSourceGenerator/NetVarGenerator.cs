@@ -725,13 +725,15 @@ namespace OmniNetSourceGenerator
 								SyntaxFactory.ParseStatement(
 									$"var nextValue = buffer.ReadAsBinary<{propertyType}>();"
 								),
-								SyntaxFactory.ParseStatement(
+								SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"!OnNetworkVariableDeepEquals(m_{propertyName}, nextValue, propertyName)"),
+								SyntaxFactory.Block(
+									SyntaxFactory.ParseStatement(
 									$"On{propertyName}Changed(m_{propertyName}, nextValue, false);"
 								),
 								SyntaxFactory.ParseStatement(
 									$"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"
 								),
-								SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;"),
+								SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;")), SyntaxFactory.ElseClause(SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;")))),
 								SyntaxFactory.BreakStatement()
 							),
 						}
