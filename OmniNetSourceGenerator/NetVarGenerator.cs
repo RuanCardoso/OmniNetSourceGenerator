@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 // Generate serializer and deserialize methods.
 // override ___OnPropertyChanged___ and etc.
@@ -109,6 +109,14 @@ namespace OmniNetSourceGenerator
 
 									List<StatementSyntax> onNotifyHandlers =
 										new List<StatementSyntax>();
+
+									List<StatementSyntax> onNotifyEditorHandlers =
+										new List<StatementSyntax>
+										{
+											SyntaxFactory.ParseStatement(
+											 $"___NotifyEditorChange___Called = true;"
+											)
+										};
 
 									HashSet<byte> ids = new HashSet<byte>();
 
@@ -231,6 +239,12 @@ namespace OmniNetSourceGenerator
 													$"{propSyntax.Identifier.Text} = m_{propSyntax.Identifier.Text};"
 												)
 											);
+
+											onNotifyEditorHandlers.Add(
+												SyntaxFactory.ParseStatement(
+													$"{propSyntax.Identifier.Text} = m_{propSyntax.Identifier.Text};"
+												)
+											);
 										}
 										else if (member is FieldDeclarationSyntax fieldSyntax)
 										{
@@ -282,6 +296,12 @@ namespace OmniNetSourceGenerator
 												);
 
 												onNotifyHandlers.Add(
+													SyntaxFactory.ParseStatement(
+														$"{variableName} = m_{variableName};"
+													)
+												);
+
+												onNotifyEditorHandlers.Add(
 													SyntaxFactory.ParseStatement(
 														$"{variableName} = m_{variableName};"
 													)
@@ -414,6 +434,12 @@ namespace OmniNetSourceGenerator
 									   )
 									);
 
+									onNotifyEditorHandlers.Add(
+									   SyntaxFactory.ParseStatement(
+											 $"base.___NotifyEditorChange___();"
+									   )
+									);
+
 									MethodDeclarationSyntax onNotifyChange = SyntaxFactory
 										.MethodDeclaration(
 											SyntaxFactory.ParseTypeName("void"),
@@ -431,11 +457,29 @@ namespace OmniNetSourceGenerator
 											)
 										);
 
+									MethodDeclarationSyntax onNotifyEditorChange = SyntaxFactory
+										.MethodDeclaration(
+											SyntaxFactory.ParseTypeName("void"),
+											"___NotifyEditorChange___"
+										)
+										.WithModifiers(
+											SyntaxFactory.TokenList(
+												SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
+												SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
+											)
+										)
+										.WithBody(
+											SyntaxFactory.Block(
+												SyntaxFactory.List(onNotifyEditorHandlers)
+											)
+										);
+
 									newClassSyntax = newClassSyntax.AddMembers(
 										onServerPropertyChanged,
 										onClientPropertyChanged,
 										onPropertyChanged,
-										onNotifyChange
+										onNotifyChange,
+										onNotifyEditorChange
 									);
 
 									newClassSyntax = newClassSyntax.AddMembers(

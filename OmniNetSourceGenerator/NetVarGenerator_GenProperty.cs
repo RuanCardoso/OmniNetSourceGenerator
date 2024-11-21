@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 // Generate property to a field with ManualSync...
 
@@ -387,6 +387,7 @@ namespace OmniNetSourceGenerator
 																		)
 																		.WithBody(
 																			SyntaxFactory.Block(
+																				SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"DeepEquals(m_{variableName}, value, nameof(m_{variableName}))"), SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;"))),
 																				SyntaxFactory.ParseStatement(
 																					$"On{variableName}Changed(m_{variableName}, value, true);"
 																				),
@@ -426,8 +427,8 @@ namespace OmniNetSourceGenerator
 																												$"Remote.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"
 																											)
 																										), SyntaxFactory.ElseClause(
-													                                                        SyntaxFactory.Block(
-														                                                SyntaxFactory.ParseStatement("throw new System.InvalidOperationException(\"You are trying to modify a variable that you have no authority over, be sure to check IsMine/IsLocalPlayer/IsServer/IsClient.\");")))
+																											SyntaxFactory.Block(
+																										SyntaxFactory.ParseStatement("throw new System.InvalidOperationException(\"You are trying to modify a variable that you have no authority over, be sure to check IsMine/IsLocalPlayer/IsServer/IsClient.\");")))
 
 																									)
 																								)
