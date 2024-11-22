@@ -1,18 +1,22 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Linq;
 
-namespace OmniNetSourceGenerator
+namespace SourceGenerator.Helpers
 {
-	internal static class Helper
+	public static class GenHelper
 	{
 		public static T GetArgumentExpression<T>(string argumentName, int argumentIndex, SeparatedSyntaxList<AttributeArgumentSyntax> arguments) where T : ExpressionSyntax
 		{
+			bool IsIdentifierName(IdentifierNameSyntax identifier)
+			{
+				return identifier.Identifier.Text.ToLowerInvariant() == argumentName.ToLowerInvariant();
+			}
+
 			foreach (AttributeArgumentSyntax argument in arguments)
 			{
 				if (argument.NameColon != null)
 				{
-					if (IsIdentifierName(argument.NameColon.Name, argumentName))
+					if (IsIdentifierName(argument.NameColon.Name))
 					{
 						return (T)argument.Expression;
 					}
@@ -20,7 +24,7 @@ namespace OmniNetSourceGenerator
 				}
 				else if (argument.NameEquals != null)
 				{
-					if (IsIdentifierName(argument.NameEquals.Name, argumentName))
+					if (IsIdentifierName(argument.NameEquals.Name))
 					{
 						return (T)argument.Expression;
 					}
@@ -48,11 +52,6 @@ namespace OmniNetSourceGenerator
 			}
 
 			return null;
-		}
-
-		private static bool IsIdentifierName(IdentifierNameSyntax identifier, string argumentName)
-		{
-			return identifier.Identifier.Text.ToLowerInvariant() == argumentName.ToLowerInvariant();
 		}
 	}
 }
