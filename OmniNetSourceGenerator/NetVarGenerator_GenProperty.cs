@@ -236,7 +236,7 @@ namespace OmniNetSourceGenerator
 													)
 												);
 
-												return;
+												continue;
 											}
 
 											// remove m_ prefix
@@ -258,7 +258,7 @@ namespace OmniNetSourceGenerator
 													)
 												);
 
-												return;
+												continue;
 											}
 
 											while (ids.Contains(id))

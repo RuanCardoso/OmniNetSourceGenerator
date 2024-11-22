@@ -67,8 +67,8 @@ namespace NamespaceTests
 
 	public partial class Program : PlayerBase
 	{
-		// [NetworkVariable]
-		// private Aaaa m_Hel;
+		[NetworkVariable]
+		private Aaaa m_Hel;
 
 		// private int m_Mana;
 

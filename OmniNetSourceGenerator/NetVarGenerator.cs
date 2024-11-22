@@ -252,9 +252,47 @@ namespace OmniNetSourceGenerator
 												var variable in fieldSyntax.Declaration.Variables
 											)
 											{
-												// remove m_ prefix
-												string variableName =
-													variable.Identifier.Text.Substring(2);
+												// Check if the field name follows the naming convention
+												string fieldName = variable.Identifier.Text;
+												if (!fieldName.StartsWith("m_"))
+												{
+													context.ReportDiagnostic(
+														Diagnostic.Create(
+															new DiagnosticDescriptor(
+																"CB0012",
+																"Naming Convention",
+																$"The field {fieldName} does not follow the naming convention. It should start with m_ and be in PascalCase.",
+																"Design",
+																DiagnosticSeverity.Error,
+																isEnabledByDefault: true
+															),
+															Location.None
+														)
+													);
+
+													continue;
+												}
+
+												// Remove m_ prefix
+												string variableName = fieldName.Substring(2);
+												if (!char.IsUpper(variableName[0]))
+												{
+													context.ReportDiagnostic(
+														Diagnostic.Create(
+															new DiagnosticDescriptor(
+																"CB003",
+																"Invalid Property Name",
+																"The first letter after \"m_\" must be capitalized like as \"m_Power\". Ensure that the name is correct.",
+																"Design",
+																DiagnosticSeverity.Error,
+																isEnabledByDefault: true
+															),
+															Location.None
+														)
+													);
+
+													continue;
+												}
 
 												while (ids.Contains(id))
 												{
