@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SourceGenerator.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -155,7 +156,7 @@ namespace OmniNetSourceGenerator
 													.Arguments;
 
 												var idTypeExpression =
-													Helper.GetArgumentExpression<LiteralExpressionSyntax>(
+													GenHelper.GetArgumentExpression<LiteralExpressionSyntax>(
 														"id",
 														0,
 														arguments
