@@ -1,11 +1,9 @@
-﻿#nullable disable
-
-using OmniNet;
+﻿using Omni.Core;
 
 public partial class GenTests : NetworkBehaviour
 {
-	[LocalService]
-	private GenTests GenService { get; set; }
+	[GlobalService]
+	private GenTests? GenService { get; set; } = null;
 
 	[NetworkVariable]
 	private float m_Health = 100f;
@@ -18,10 +16,15 @@ namespace OmniNet
 	public partial class GenTests2 : NetworkBehaviour
 	{
 		[LocalService]
-		private GenTests2 GenService { get; set; }
+		private GenTests2? GenService { get; set; } = null;
 
-		[NetworkVariable]
+		[NetworkVariable(21)]
 		private float m_Health = 100f;
+
+		void Test()
+		{
+
+		}
 	}
 
 	public class MonoBehaviour

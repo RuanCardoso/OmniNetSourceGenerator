@@ -24,7 +24,6 @@ namespace OmniNetSourceGenerator
 						StringBuilder sb = new StringBuilder();
 						sb.AppendLine("#nullable disable");
 						sb.AppendLine("#pragma warning disable");
-						sb.AppendLine("using Omni.Core;");
 						sb.AppendLine();
 
 						ClassDeclarationSyntax parentClass = @class.ParentClass.Clear(out var fromClass);

@@ -30,8 +30,7 @@ namespace OmniNetSourceGenerator
 							StringBuilder sb = new StringBuilder();
 							sb.AppendLine("#nullable disable");
 							sb.AppendLine("#pragma warning disable");
-							sb.AppendLine("using Newtonsoft.Json;");
-							sb.AppendLine("using MemoryPack;");
+							sb.AppendLine();
 
 							ClassDeclarationSyntax parentClass = @class.ParentClass.Clear(out var fromClass);
 							foreach (UsingDirectiveSyntax usingSyntax in fromClass.SyntaxTree.GetRoot().GetDescendantsOfType<UsingDirectiveSyntax>())
