@@ -287,8 +287,7 @@ namespace OmniNetSourceGenerator
 		{
 			return baseClassName == "NetworkBehaviour" ? "IsServer" :
 				   baseClassName == "ServerBehaviour" ? "true" :
-				   baseClassName == "ClientBehaviour" ? "false" :
-				   "IsServer";
+				   baseClassName == "ClientBehaviour" ? "false" : "IsServer";
 		}
 
 		private bool IsSerializable(ITypeSymbol typeSymbol, out bool withPeer)
