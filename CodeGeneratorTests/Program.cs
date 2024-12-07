@@ -1,5 +1,4 @@
 ﻿using Omni.Core;
-
 public partial class GenTests : NetworkBehaviour
 {
 	[GlobalService]
@@ -24,6 +23,12 @@ namespace OmniNet
 		void Test()
 		{
 
+		}
+
+		[Server(4)]
+		void OnMove()
+		{
+			
 		}
 	}
 

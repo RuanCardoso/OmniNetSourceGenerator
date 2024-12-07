@@ -1,5 +1,6 @@
 ﻿#pragma warning disable
 
+using Omni.Core;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,6 +10,15 @@ namespace Newtonsoft.Json { }
 
 public interface IMessage { }
 public interface IMessageWithPeer { }
+
+
+namespace UnityEngine
+{
+	public class Application
+	{
+		public static bool isPlaying { get; }
+	}
+}
 
 public class NetVarBehaviour { }
 public class DataBuffer : IDisposable
@@ -75,6 +85,11 @@ public class NetworkVariableOptions
 
 namespace Omni.Core
 {
+	public struct SyncOptions()
+	{
+
+	}
+
 	public static class Service
 	{
 		/// <summary>
@@ -430,6 +445,8 @@ public class NetworkBehaviour : NetVarBehaviour
 	public class Event
 	{
 		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+
+		public void Invoke(byte msgId, SyncOptions options) { }
 	}
 
 	public Event Remote;

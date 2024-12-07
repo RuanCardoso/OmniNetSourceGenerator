@@ -1,7 +1,26 @@
 ﻿using System;
 
+namespace TriInspector
+{
+	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+	public sealed class Group : Attribute
+	{
+		public string name;
+
+		public Group(string name) => this.name = name;
+	}
+}
+
+
 namespace Omni.Core
 {
+	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+	public sealed class SerializeProperty : Attribute
+	{
+
+	}
+
+
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 	public class ServiceAttribute : Attribute
 	{
@@ -38,11 +57,13 @@ namespace Omni.Core
 
 	public class Server : Attribute
 	{
+		internal byte Id { get; }
 		public Server(byte id) { }
 	}
 
 	public class Client : Attribute
 	{
+		internal byte Id { get; }
 		public Client(byte id) { }
 	}
 

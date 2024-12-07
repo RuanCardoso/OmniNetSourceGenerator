@@ -29,6 +29,7 @@ namespace OmniNetSourceGenerator
 							StringBuilder sb = new StringBuilder();
 							sb.AppendLine("#nullable disable");
 							sb.AppendLine("#pragma warning disable");
+							sb.AppendLine("using TriInspector;");
 							sb.AppendLine();
 
 							ClassDeclarationSyntax parentClass = @class.ParentClass.Clear(out var fromClass);
@@ -165,7 +166,18 @@ namespace OmniNetSourceGenerator
 																						}
 																					)
 																				)
-																			)
+																			),
+																			SyntaxFactory.Attribute(SyntaxFactory.ParseName($"SerializeProperty")),
+																			SyntaxFactory.Attribute(SyntaxFactory.ParseName($"Group"),
+																			SyntaxFactory.AttributeArgumentList(
+																					SyntaxFactory.SeparatedList(
+																						new AttributeArgumentSyntax[]
+																						{
+																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"\"Network Variables\""))
+																						}
+																					)
+																				)
+																			),
 																		}
 																	)
 																)
@@ -181,6 +193,7 @@ namespace OmniNetSourceGenerator
 																	SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement($"return m_{variableName};"))),
 																	SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithBody(
 																		SyntaxFactory.Block(
+																			SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"!UnityEngine.Application.isPlaying"), SyntaxFactory.Block(SyntaxFactory.ParseStatement($"m_{variableName} = value;"), SyntaxFactory.ParseStatement("return;"))),
 																			SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"DeepEquals(m_{variableName}, value, \"{variableName}\")"), SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;"))),
 																			SyntaxFactory.ParseStatement($"On{variableName}Changed(m_{variableName}, value, true);"),
 																			SyntaxFactory.ParseStatement($"OnBase{variableName}Changed(m_{variableName}, value, true);"),
