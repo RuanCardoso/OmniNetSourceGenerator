@@ -26,29 +26,12 @@ namespace OmniNet
 		private float m_Mana2 = 100f;
 	}
 
-	public partial class Player : PlayerBase
+	public partial class Player : ServerBehaviour
 	{
-		[NetworkVariable]
-		private float m_Health = 100f;
-
-		[NetworkVariable]
-		private float m_Health2 = 100f;
-
-		[NetworkVariable]
-		private float m_Health4 = 100f;
-
-		[LocalService]
-		private PlayerBase m_Gen;
-
-		void Test()
+		[Server(10)]
+		void OnMoveRpc()
 		{
-
-		}
-
-		[Server(4)]
-		void OnMove()
-		{
-
+			// invocado no servidor
 		}
 	}
 

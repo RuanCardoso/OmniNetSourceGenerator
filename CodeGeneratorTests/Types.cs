@@ -4,6 +4,7 @@ using Omni.Core;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace MemoryPack { }
 namespace Newtonsoft.Json { }
@@ -522,6 +523,138 @@ public class NetworkBehaviour : NetVarBehaviour
 
 		public void Invoke(byte msgId, ServerOptions options) { }
 		public void Invoke(byte msgId, ClientOptions options) { }
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1>(byte msgId, T1 p1, ClientOptions options = default)
+				where T1 : unmanaged
+		{
+			
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2>(byte msgId, T1 p1, T2 p2, ClientOptions options = default)
+			where T1 : unmanaged
+			where T2 : unmanaged
+		{
+		
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3>(
+			byte msgId,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			ClientOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+		{
+		
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3, T4>(
+			byte msgId,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			T4 p4,
+			ClientOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+			where T4 : unmanaged
+		{
+		
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3, T4, T5>(
+			byte msgId,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			T4 p4,
+			T5 p5,
+			ClientOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+			where T4 : unmanaged
+			where T5 : unmanaged
+		{
+		
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1>(byte msgId, T1 p1, ServerOptions options = default)
+				where T1 : unmanaged
+		{
+			
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2>(byte msgId, T1 p1, T2 p2, ServerOptions options = default)
+			where T1 : unmanaged
+			where T2 : unmanaged
+		{
+		
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3>(
+			byte msgId,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			ServerOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+		{
+			
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3, T4>(
+			byte msgId,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			T4 p4,
+			ServerOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+			where T4 : unmanaged
+		{
+		
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3, T4, T5>(
+			byte msgId,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			T4 p4,
+			T5 p5,
+			ServerOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+			where T4 : unmanaged
+			where T5 : unmanaged
+		{
+		
+		}
 	}
 
 	public Event Remote;
@@ -533,4 +666,145 @@ public class Event2
 	public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	public void Invoke(byte msgId, NetworkPeer peer, ServerOptions options) { }
 	public void Invoke(byte msgId, ClientOptions options) { }
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1>(byte msgId, NetworkPeer peer, T1 p1, ServerOptions options = default)
+			where T1 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1, T2>(
+		byte msgId,
+		NetworkPeer peer,
+		T1 p1,
+		T2 p2,
+		ServerOptions options = default
+	)
+		where T1 : unmanaged
+		where T2 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1, T2, T3>(
+		byte msgId,
+		NetworkPeer peer,
+		T1 p1,
+		T2 p2,
+		T3 p3,
+		ServerOptions options = default
+	)
+		where T1 : unmanaged
+		where T2 : unmanaged
+		where T3 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1, T2, T3, T4>(
+		byte msgId,
+		NetworkPeer peer,
+		T1 p1,
+		T2 p2,
+		T3 p3,
+		T4 p4,
+		ServerOptions options = default
+	)
+		where T1 : unmanaged
+		where T2 : unmanaged
+		where T3 : unmanaged
+		where T4 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1, T2, T3, T4, T5>(
+		byte msgId,
+		NetworkPeer peer,
+		T1 p1,
+		T2 p2,
+		T3 p3,
+		T4 p4,
+		T5 p5,
+		ServerOptions options = default
+	)
+		where T1 : unmanaged
+		where T2 : unmanaged
+		where T3 : unmanaged
+		where T4 : unmanaged
+		where T5 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1>(byte msgId, T1 p1, ClientOptions options = default)
+			where T1 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1, T2>(byte msgId, T1 p1, T2 p2, ClientOptions options = default)
+		where T1 : unmanaged
+		where T2 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1, T2, T3>(
+		byte msgId,
+		T1 p1,
+		T2 p2,
+		T3 p3,
+		ClientOptions options = default
+	)
+		where T1 : unmanaged
+		where T2 : unmanaged
+		where T3 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1, T2, T3, T4>(
+		byte msgId,
+		T1 p1,
+		T2 p2,
+		T3 p3,
+		T4 p4,
+		ClientOptions options = default
+	)
+		where T1 : unmanaged
+		where T2 : unmanaged
+		where T3 : unmanaged
+		where T4 : unmanaged
+	{
+		
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public void Invoke<T1, T2, T3, T4, T5>(
+		byte msgId,
+		T1 p1,
+		T2 p2,
+		T3 p3,
+		T4 p4,
+		T5 p5,
+		ClientOptions options = default
+	)
+		where T1 : unmanaged
+		where T2 : unmanaged
+		where T3 : unmanaged
+		where T4 : unmanaged
+		where T5 : unmanaged
+	{
+		
+	}
 }
