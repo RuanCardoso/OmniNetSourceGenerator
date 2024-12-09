@@ -87,9 +87,9 @@ namespace SourceGenerator.Helpers
 			return false;
 		}
 
-		public static bool ReportUnsupportedDualBehaviourUsage(GeneratorExecutionContext context, string baseClassName)
+		public static bool ReportUnsupportedDualBehaviourUsage(GeneratorExecutionContext context, bool isDualBehaviour)
 		{
-			if (baseClassName == "DualBehaviour")
+			if (isDualBehaviour)
 			{
 				context.ReportDiagnostic(
 					Diagnostic.Create(

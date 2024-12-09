@@ -32,12 +32,14 @@ namespace OmniNetSourceGenerator
 
 						if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 						{
-							if (parentClass.HasBaseType("NetworkBehaviour", "DualBehaviour", "ClientBehaviour", "ServerBehaviour", "ServiceBehaviour", "Base"))
+							var semanticModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+							bool isNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "NetworkBehaviour");
+							bool isNonNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "DualBehaviour", "ClientBehaviour", "ServerBehaviour", "ServiceBehaviour");
+							if (isNetworkBehaviour || isNonNetworkBehaviour)
 							{
 								NamespaceDeclarationSyntax currentNamespace = fromClass.GetNamespace(out bool hasNamespace);
 								if (hasNamespace) currentNamespace = currentNamespace.Clear(out _);
 
-								string baseClassName = parentClass.GetBaseTypeName();
 								List<StatementSyntax> statements = new List<StatementSyntax>();
 								foreach (MemberDeclarationSyntax member in @class.Members)
 								{
@@ -61,12 +63,12 @@ namespace OmniNetSourceGenerator
 									{
 										foreach (VariableDeclaratorSyntax variable in field.Declaration.Variables)
 										{
-											AddStatement(context, statements, baseClassName, serviceName, isGlobalService, variable.Identifier.Text, field.Declaration.Type);
+											AddStatement(context, statements, isNetworkBehaviour, serviceName, isGlobalService, variable.Identifier.Text, field.Declaration.Type);
 										}
 									}
 									else if (member is PropertyDeclarationSyntax property)
 									{
-										AddStatement(context, statements, baseClassName, serviceName, isGlobalService, property.Identifier.Text, property.Type);
+										AddStatement(context, statements, isNetworkBehaviour, serviceName, isGlobalService, property.Identifier.Text, property.Type);
 									}
 								}
 
@@ -108,7 +110,7 @@ namespace OmniNetSourceGenerator
 		private void AddStatement(
 			GeneratorExecutionContext context,
 			List<StatementSyntax> statements,
-			string baseClassName,
+			bool isNetworkBehaviour,
 			string serviceName,
 			bool isGlobalService,
 			string memberName,
@@ -120,7 +122,7 @@ namespace OmniNetSourceGenerator
 			}
 			else
 			{
-				AddLocalServiceStatement(context, statements, baseClassName, serviceName, memberName, typeSyntax);
+				AddLocalServiceStatement(context, statements, isNetworkBehaviour, serviceName, memberName, typeSyntax);
 			}
 		}
 
@@ -140,12 +142,12 @@ namespace OmniNetSourceGenerator
 		private void AddLocalServiceStatement(
 			GeneratorExecutionContext context,
 			List<StatementSyntax> statements,
-			string baseClassName,
+			bool isNetworkBehaviour,
 			string serviceName,
 			string memberName,
 			TypeSyntax typeSyntax)
 		{
-			if (baseClassName == "NetworkBehaviour" || baseClassName.Contains("Base"))
+			if (isNetworkBehaviour)
 			{
 				string statement = string.IsNullOrEmpty(serviceName)
 					? $"{memberName} = Identity.Get<{typeSyntax}>();"

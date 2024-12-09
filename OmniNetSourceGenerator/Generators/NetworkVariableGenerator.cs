@@ -38,15 +38,19 @@ namespace OmniNetSourceGenerator
 
 							if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 							{
-								if (parentClass.HasBaseType("NetworkBehaviour", "DualBehaviour", "ClientBehaviour", "ServerBehaviour", "Base"))
-								{
-									string baseClassName = parentClass.GetBaseTypeName();
-									if (GenHelper.ReportUnsupportedDualBehaviourUsage(context, baseClassName))
-									{
-										continue;
-									}
+								var semanticModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+								bool isNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "NetworkBehaviour");
+								bool isClientBehaviour = fromClass.InheritsFrom(semanticModel, "ClientBehaviour");
+								bool isServerBehaviour = fromClass.InheritsFrom(semanticModel, "ServerBehaviour");
 
-									string isServer = DetermineIsServerValue(baseClassName);
+								// Note: DualBehaviour is not supported.
+								bool isDualBehaviour = fromClass.InheritsFrom(semanticModel, "DualBehaviour");
+								if (GenHelper.ReportUnsupportedDualBehaviourUsage(context, isDualBehaviour))
+									continue;
+
+								if (isNetworkBehaviour || (isClientBehaviour || isServerBehaviour))
+								{
+									string isServer = DetermineIsServerValue(isNetworkBehaviour, isClientBehaviour, isServerBehaviour, out string baseClassName);
 									NamespaceDeclarationSyntax currentNamespace = fromClass.GetNamespace(out bool hasNamespace);
 									if (hasNamespace) currentNamespace = currentNamespace.Clear(out _);
 
@@ -85,11 +89,15 @@ namespace OmniNetSourceGenerator
 											}
 										}
 
-										if (baseClassName.Contains("Base"))
+										if (id <= 0)
 										{
-											if (id <= 0)
+											int baseDepth = fromClass.GetBaseDepth(semanticModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour");
+											if (baseDepth != 0)
 											{
-												id = 101;
+												unchecked
+												{
+													id = (byte)(255 - (255 / baseDepth));
+												}
 											}
 										}
 
@@ -282,11 +290,28 @@ namespace OmniNetSourceGenerator
 			}
 		}
 
-		private string DetermineIsServerValue(string baseClassName)
+		private string DetermineIsServerValue(bool isNetworkBehaviour, bool isClientBehaviour, bool isServerBehaviour, out string baseClassName)
 		{
-			return baseClassName == "NetworkBehaviour" ? "IsServer" :
-				   baseClassName == "ServerBehaviour" ? "true" :
-				   baseClassName == "ClientBehaviour" ? "false" : "IsServer";
+			if (isNetworkBehaviour)
+			{
+				baseClassName = "NetworkBehaviour";
+				return "IsServer";
+			}
+			else
+			{
+				if (isClientBehaviour)
+				{
+					baseClassName = "ClientBehaviour";
+					return "false";
+				}
+				else if (isServerBehaviour)
+				{
+					baseClassName = "ServerBehaviour";
+					return "true";
+				}
+			}
+
+			throw new NotImplementedException("Unable to determine 'isServer' value");
 		}
 
 		private bool IsSerializable(ITypeSymbol typeSymbol, out bool withPeer)
@@ -320,7 +345,7 @@ namespace OmniNetSourceGenerator
 				.WithBody(
 					SyntaxFactory.Block(
 						SyntaxFactory.ParseStatement("options ??= new();"),
-						(baseClassName == "NetworkBehaviour" || baseClassName.Contains("Base"))
+						baseClassName == "NetworkBehaviour"
 							? SyntaxFactory
 								.IfStatement(
 									SyntaxFactory.ParseExpression("IsMine"),

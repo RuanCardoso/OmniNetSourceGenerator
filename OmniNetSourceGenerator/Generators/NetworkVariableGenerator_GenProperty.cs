@@ -38,14 +38,19 @@ namespace OmniNetSourceGenerator
 
 							if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 							{
-								if (parentClass.HasBaseType("NetworkBehaviour", "DualBehaviour", "ClientBehaviour", "ServerBehaviour", "Base"))
-								{
-									string baseClassName = parentClass.GetBaseTypeName();
-									if (GenHelper.ReportUnsupportedDualBehaviourUsage(context, baseClassName))
-									{
-										continue;
-									}
+								var semanticModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+								bool isNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "NetworkBehaviour");
+								bool isClientBehaviour = fromClass.InheritsFrom(semanticModel, "ClientBehaviour");
+								bool isServerBehaviour = fromClass.InheritsFrom(semanticModel, "ServerBehaviour");
 
+								// Note: DualBehaviour is not supported.
+								bool isDualBehaviour = fromClass.InheritsFrom(semanticModel, "DualBehaviour");
+								if (GenHelper.ReportUnsupportedDualBehaviourUsage(context, isDualBehaviour))
+									continue;
+
+								if (isNetworkBehaviour || (isClientBehaviour || isServerBehaviour))
+								{
+									string baseClassName = isNetworkBehaviour ? "NetworkBehaviour" : (isClientBehaviour ? "ClientBehaviour" : isServerBehaviour ? "ServerBehaviour" : null);
 									NamespaceDeclarationSyntax currentNamespace = fromClass.GetNamespace(out bool hasNamespace);
 									if (hasNamespace) currentNamespace = currentNamespace.Clear(out _);
 
@@ -90,11 +95,15 @@ namespace OmniNetSourceGenerator
 											}
 										}
 
-										if (baseClassName.Contains("Base"))
+										if (id <= 0)
 										{
-											if (id <= 0)
+											int baseDepth = fromClass.GetBaseDepth(semanticModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour");
+											if (baseDepth != 0)
 											{
-												id = 101;
+												unchecked
+												{
+													id = (byte)(255 - (255 / baseDepth));
+												}
 											}
 										}
 
@@ -198,7 +207,7 @@ namespace OmniNetSourceGenerator
 																			SyntaxFactory.ParseStatement($"On{variableName}Changed(m_{variableName}, value, true);"),
 																			SyntaxFactory.ParseStatement($"OnBase{variableName}Changed(m_{variableName}, value, true);"),
 																			SyntaxFactory.ParseStatement($"m_{variableName} = value;"),
-																			(baseClassName == "NetworkBehaviour" || baseClassName.Contains("Base"))
+																			(baseClassName == "NetworkBehaviour")
 																				? SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression("IsMine"),
 																						SyntaxFactory.Block(
 																							SyntaxFactory.ParseStatement($"Local.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
