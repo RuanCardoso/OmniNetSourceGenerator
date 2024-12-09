@@ -85,7 +85,12 @@ public class NetworkVariableOptions
 
 namespace Omni.Core
 {
-	public struct SyncOptions()
+	public struct ClientOptions()
+	{
+
+	}
+
+	public struct ServerOptions()
 	{
 
 	}
@@ -515,7 +520,8 @@ public class NetworkBehaviour : NetVarBehaviour
 	{
 		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 
-		public void Invoke(byte msgId, SyncOptions options) { }
+		public void Invoke(byte msgId, ServerOptions options) { }
+		public void Invoke(byte msgId, ClientOptions options) { }
 	}
 
 	public Event Remote;
@@ -525,6 +531,6 @@ public class NetworkBehaviour : NetVarBehaviour
 public class Event2
 {
 	public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
-	public void Invoke(byte msgId, NetworkPeer peer, SyncOptions options) { }
-	public void Invoke(byte msgId, SyncOptions options) { }
+	public void Invoke(byte msgId, NetworkPeer peer, ServerOptions options) { }
+	public void Invoke(byte msgId, ClientOptions options) { }
 }

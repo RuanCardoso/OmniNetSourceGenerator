@@ -69,10 +69,10 @@ namespace OmniNetSourceGenerator
 										.WithParameterList(SyntaxFactory.ParameterList(
 											SyntaxFactory.SeparatedList(
 												isNetworkBehaviour ? new ParameterSyntax[] {
-												SyntaxFactory.Parameter(SyntaxFactory.Identifier("SyncOptions options"))
+												isServerAttribute ? SyntaxFactory.Parameter(SyntaxFactory.Identifier("ClientOptions options")) : SyntaxFactory.Parameter(SyntaxFactory.Identifier("ServerOptions options"))
 											} : isNonNetworkBehaviour ? new ParameterSyntax[] {
 												SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer")),
-												SyntaxFactory.Parameter(SyntaxFactory.Identifier("SyncOptions options"))
+												isServerAttribute ? SyntaxFactory.Parameter(SyntaxFactory.Identifier("ClientOptions options")) : SyntaxFactory.Parameter(SyntaxFactory.Identifier("ServerOptions options"))
 											} : null))
 										).WithBody(SyntaxFactory.Block(isServerAttribute
 										? isNetworkBehaviour ? SyntaxFactory.ParseStatement($"Local.Invoke({id}, options);") : isNonNetworkBehaviour ? SyntaxFactory.ParseStatement($"Local.Invoke({id}, options);") : null
