@@ -85,29 +85,57 @@ namespace SourceGenerator.Extensions
 			return @namespace.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>());
 		}
 
-		public static bool HasBaseType(this ClassDeclarationSyntax @class, string baseType)
+		public static int GetBaseDepth(this ClassDeclarationSyntax @class, SemanticModel semanticModel, params string[] rootBases)
+		{
+			if (!(semanticModel.GetDeclaredSymbol(@class) is INamedTypeSymbol classSymbol))
+				return -1;
+
+			INamedTypeSymbol currentBase = classSymbol.BaseType;
+			int depth = 0;
+			while (currentBase != null)
+			{
+				++depth;
+				if (rootBases.Any(x => x == currentBase.Name || x == currentBase.ToDisplayString()))
+				{
+					return depth;
+				}
+
+				currentBase = currentBase.BaseType;
+			}
+
+			return depth;
+		}
+
+		public static bool InheritsFrom(this ClassDeclarationSyntax classDeclaration, SemanticModel semanticModel, string baseTypeName)
+		{
+			if (!(semanticModel.GetDeclaredSymbol(classDeclaration) is INamedTypeSymbol classSymbol))
+				return false;
+
+			INamedTypeSymbol currentBase = classSymbol.BaseType;
+			while (currentBase != null)
+			{
+				if (currentBase.Name == baseTypeName || currentBase.ToDisplayString() == baseTypeName)
+					return true;
+
+				currentBase = currentBase.BaseType;
+			}
+
+			return false;
+		}
+
+		public static bool InheritsFrom(this ClassDeclarationSyntax classDeclaration, SemanticModel semanticModel, params string[] baseTypeNames)
+		{
+			return baseTypeNames.Any(x => classDeclaration.InheritsFrom(semanticModel, x));
+		}
+
+		public static bool InheritsFrom(this ClassDeclarationSyntax @class, string baseType)
 		{
 			return @class.BaseList != null && @class.BaseList.Types.Any(x => x.ToString().Contains(baseType));
 		}
 
-		public static bool HasBaseType(this ClassDeclarationSyntax @class, params string[] baseType)
+		public static bool InheritsFrom(this ClassDeclarationSyntax @class, params string[] baseType)
 		{
-			return baseType.Any(x => @class.HasBaseType(x));
-		}
-
-		public static string GetBaseTypeName(this ClassDeclarationSyntax @class)
-		{
-			if (@class.BaseList == null)
-			{
-				return string.Empty;
-			}
-
-			if (@class.BaseList.Types.Count <= 0)
-			{
-				return string.Empty;
-			}
-
-			return @class.BaseList.Types[0].ToString();
+			return baseType.Any(x => @class.InheritsFrom(x));
 		}
 	}
 }

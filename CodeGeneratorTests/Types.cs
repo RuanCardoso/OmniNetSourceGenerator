@@ -343,6 +343,29 @@ public class ServerBehaviour
 
 	}
 
+	/// <summary>
+	/// Compares two values of type T for deep equality.
+	/// </summary>
+	/// <typeparam name="T">The type of the values to compare.</typeparam>
+	/// <param name="oldValue">The old value to compare.</param>
+	/// <param name="newValue">The new value to compare.</param>
+	/// <returns>True if the values are deeply equal; otherwise, false.</returns>
+	protected bool DeepEquals<T>(T oldValue, T newValue, string name)
+	{
+		return true;
+	}
+
+	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name)
+	{
+		return false;
+	}
+
+	protected bool ___NotifyEditorChange___Called { get; set; } = false;
+	protected virtual void ___NotifyEditorChange___()
+	{
+		___NotifyEditorChange___Called = false;
+	}
+
 	protected virtual void ___NotifyChange___() { }
 
 	public class Event
@@ -350,8 +373,8 @@ public class ServerBehaviour
 		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	}
 
-	public Event Remote;
-	public Event Local;
+	public Event2 Remote;
+	public Event2 Local;
 }
 
 public class ClientBehaviour
@@ -365,14 +388,37 @@ public class ClientBehaviour
 	{ }
 
 	protected virtual void ___NotifyChange___() { }
+	protected bool ___NotifyEditorChange___Called { get; set; } = false;
+	protected virtual void ___NotifyEditorChange___()
+	{
+		___NotifyEditorChange___Called = false;
+	}
+
+
+	/// <summary>
+	/// Compares two values of type T for deep equality.
+	/// </summary>
+	/// <typeparam name="T">The type of the values to compare.</typeparam>
+	/// <param name="oldValue">The old value to compare.</param>
+	/// <param name="newValue">The new value to compare.</param>
+	/// <returns>True if the values are deeply equal; otherwise, false.</returns>
+	protected bool DeepEquals<T>(T oldValue, T newValue, string name)
+	{
+		return true;
+	}
+
+	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name)
+	{
+		return false;
+	}
 
 	public class Event
 	{
 		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	}
 
-	public Event Remote;
-	public Event Local;
+	public Event2 Remote;
+	public Event2 Local;
 }
 
 public class DualBehaviour
@@ -385,15 +431,38 @@ public class DualBehaviour
 	)
 	{ }
 
+	/// <summary>
+	/// Compares two values of type T for deep equality.
+	/// </summary>
+	/// <typeparam name="T">The type of the values to compare.</typeparam>
+	/// <param name="oldValue">The old value to compare.</param>
+	/// <param name="newValue">The new value to compare.</param>
+	/// <returns>True if the values are deeply equal; otherwise, false.</returns>
+	protected bool DeepEquals<T>(T oldValue, T newValue, string name)
+	{
+		return true;
+	}
+
+	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name)
+	{
+		return false;
+	}
+
 	protected virtual void ___NotifyChange___() { }
+
+	protected bool ___NotifyEditorChange___Called { get; set; } = false;
+	protected virtual void ___NotifyEditorChange___()
+	{
+		___NotifyEditorChange___Called = false;
+	}
 
 	public class Event
 	{
 		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	}
 
-	public Event Remote;
-	public Event Local;
+	public Event2 Remote;
+	public Event2 Local;
 }
 
 public class NetworkBehaviour : NetVarBehaviour
@@ -451,4 +520,10 @@ public class NetworkBehaviour : NetVarBehaviour
 
 	public Event Remote;
 	public Event Local;
+}
+
+public class Event2
+{
+	public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+	public void Invoke(byte msgId, NetworkPeer peer, SyncOptions options) { }
 }

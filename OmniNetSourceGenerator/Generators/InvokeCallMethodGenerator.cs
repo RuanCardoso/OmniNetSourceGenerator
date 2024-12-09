@@ -32,7 +32,10 @@ namespace OmniNetSourceGenerator
 
 						if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 						{
-							if (parentClass.HasBaseType("NetworkBehaviour", "DualBehaviour", "ClientBehaviour", "ServerBehaviour", "Base"))
+							var semanticModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+							bool isNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "NetworkBehaviour");
+							bool isNonNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "DualBehaviour", "ClientBehaviour", "ServerBehaviour");
+							if (isNetworkBehaviour || isNonNetworkBehaviour)
 							{
 								NamespaceDeclarationSyntax currentNamespace = fromClass.GetNamespace(out bool hasNamespace);
 								if (hasNamespace) currentNamespace = currentNamespace.Clear(out _);
@@ -65,24 +68,27 @@ namespace OmniNetSourceGenerator
 										.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
 										.WithParameterList(SyntaxFactory.ParameterList(
 											SyntaxFactory.SeparatedList(
-												new ParameterSyntax[] {
+												isNetworkBehaviour ? new ParameterSyntax[] {
 												SyntaxFactory.Parameter(SyntaxFactory.Identifier("SyncOptions options"))
-											}))
+											} : isNonNetworkBehaviour ? new ParameterSyntax[] {
+												SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer")),
+												SyntaxFactory.Parameter(SyntaxFactory.Identifier("SyncOptions options"))
+											} : null))
 										).WithBody(SyntaxFactory.Block(isServerAttribute
-										? SyntaxFactory.ParseStatement($"Local.Invoke({id}, options);")
-										: SyntaxFactory.ParseStatement($"Remote.Invoke({id}, options);")))
+										? isNetworkBehaviour ? SyntaxFactory.ParseStatement($"Local.Invoke({id}, options);") : isNonNetworkBehaviour ? SyntaxFactory.ParseStatement($"Local.Invoke({id}, peer, options);") : null
+										: isNetworkBehaviour ? SyntaxFactory.ParseStatement($"Remote.Invoke({id}, options);") : isNonNetworkBehaviour ? SyntaxFactory.ParseStatement($"Remote.Invoke({id}, peer, options);") : null))
 										.WithLeadingTrivia(new SyntaxTrivia[] {
 											SyntaxFactory.Comment("/// <summary>"),
-	                                        SyntaxFactory.Comment($"/// Executes the remote procedure call (RPC) '{method.Identifier.Text}' on the {(isServerAttribute ? "'Server'" : "'Client'")}, called by the {(isServerAttribute ? "'Client'" : "'Server'")}.<br/>"),
-	                                        SyntaxFactory.Comment($"/// It uses the specified <see cref=\"SyncOptions\" /> to define the synchronization parameters."),
-	                                        SyntaxFactory.Comment("/// </summary>"),
-	                                        SyntaxFactory.Comment("/// <param name=\"options\">"),
-	                                        SyntaxFactory.Comment($"/// Defines the synchronization options for this RPC call. These options include"),
-	                                        SyntaxFactory.Comment($"/// settings for target, delivery mode, and others."),
-	                                        SyntaxFactory.Comment("/// </param>"),
-	                                        SyntaxFactory.Comment("/// <remarks>"),
-	                                        SyntaxFactory.Comment($"/// This method is auto-generated and should not be modified manually."),
-	                                        SyntaxFactory.Comment("/// </remarks>")
+											SyntaxFactory.Comment($"/// Executes the remote procedure call (RPC) '{method.Identifier.Text}' on the {(isServerAttribute ? "'Server'" : "'Client'")}, called by the {(isServerAttribute ? "'Client'" : "'Server'")}.<br/>"),
+											SyntaxFactory.Comment($"/// It uses the specified <see cref=\"SyncOptions\" /> to define the synchronization parameters."),
+											SyntaxFactory.Comment("/// </summary>"),
+											SyntaxFactory.Comment("/// <param name=\"options\">"),
+											SyntaxFactory.Comment($"/// Defines the synchronization options for this RPC call. These options include"),
+											SyntaxFactory.Comment($"/// settings for target, delivery mode, and others."),
+											SyntaxFactory.Comment("/// </param>"),
+											SyntaxFactory.Comment("/// <remarks>"),
+											SyntaxFactory.Comment($"/// This method is auto-generated and should not be modified manually."),
+											SyntaxFactory.Comment("/// </remarks>")
 										})
 									);
 								}
