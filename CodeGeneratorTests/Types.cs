@@ -526,4 +526,5 @@ public class Event2
 {
 	public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	public void Invoke(byte msgId, NetworkPeer peer, SyncOptions options) { }
+	public void Invoke(byte msgId, SyncOptions options) { }
 }

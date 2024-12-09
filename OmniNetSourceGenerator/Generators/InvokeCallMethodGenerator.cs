@@ -75,7 +75,7 @@ namespace OmniNetSourceGenerator
 												SyntaxFactory.Parameter(SyntaxFactory.Identifier("SyncOptions options"))
 											} : null))
 										).WithBody(SyntaxFactory.Block(isServerAttribute
-										? isNetworkBehaviour ? SyntaxFactory.ParseStatement($"Local.Invoke({id}, options);") : isNonNetworkBehaviour ? SyntaxFactory.ParseStatement($"Local.Invoke({id}, peer, options);") : null
+										? isNetworkBehaviour ? SyntaxFactory.ParseStatement($"Local.Invoke({id}, options);") : isNonNetworkBehaviour ? SyntaxFactory.ParseStatement($"Local.Invoke({id}, options);") : null
 										: isNetworkBehaviour ? SyntaxFactory.ParseStatement($"Remote.Invoke({id}, options);") : isNonNetworkBehaviour ? SyntaxFactory.ParseStatement($"Remote.Invoke({id}, peer, options);") : null))
 										.WithLeadingTrivia(new SyntaxTrivia[] {
 											SyntaxFactory.Comment("/// <summary>"),
