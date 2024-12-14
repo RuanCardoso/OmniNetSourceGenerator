@@ -26,6 +26,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue> where
 	public event Action<int, int> OnItemAdded;
 	public event Action<int, int> OnItemRemoved;
 	public event Action<int, int> OnItemUpdated;
+	public Action OnUpdate;
 }
 
 public class NetVarBehaviour { }
