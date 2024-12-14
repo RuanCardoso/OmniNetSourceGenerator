@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-// Generate property to a field with ManualSync...
+// Generate property to a field with NetworkVariableSync...
 
 namespace OmniNetSourceGenerator
 {
@@ -177,6 +177,7 @@ namespace OmniNetSourceGenerator
 																				)
 																			),
 																			SyntaxFactory.Attribute(SyntaxFactory.ParseName($"SerializeProperty")),
+																			SyntaxFactory.Attribute(SyntaxFactory.ParseName($"HidePicker")),
 																			SyntaxFactory.Attribute(SyntaxFactory.ParseName($"Group"),
 																			SyntaxFactory.AttributeArgumentList(
 																					SyntaxFactory.SeparatedList(
@@ -203,27 +204,22 @@ namespace OmniNetSourceGenerator
 																	SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithBody(
 																		SyntaxFactory.Block(
 																			SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"!UnityEngine.Application.isPlaying"), SyntaxFactory.Block(SyntaxFactory.ParseStatement($"m_{variableName} = value;"), SyntaxFactory.ParseStatement("return;"))),
-																			SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"DeepEquals(m_{variableName}, value, \"{variableName}\")"), SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;"))),
+																			SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"OnNetworkVariableDeepEquals(m_{variableName}, value, \"{variableName}\", {id})"), SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;"))),
 																			SyntaxFactory.ParseStatement($"On{variableName}Changed(m_{variableName}, value, true);"),
 																			SyntaxFactory.ParseStatement($"OnBase{variableName}Changed(m_{variableName}, value, true);"),
 																			SyntaxFactory.ParseStatement($"m_{variableName} = value;"),
 																			(baseClassName == "NetworkBehaviour")
-																				? SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression("IsMine"),
+																				? SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression("IsClient"),
 																						SyntaxFactory.Block(
-																							SyntaxFactory.ParseStatement($"Local.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
+																							SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
 																						)
 																					).WithElse(
-																						SyntaxFactory.ElseClause(SyntaxFactory.Block(
-																								SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression("IsServer"),
-																								SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Remote.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")),
-																								SyntaxFactory.ElseClause(SyntaxFactory.Block(
-																									SyntaxFactory.ParseStatement("throw new System.InvalidOperationException(\"You are trying to modify a variable that you have no authority over, be sure to check IsMine/IsLocalPlayer/IsServer/IsClient.\");")))
-																								)
-																							)
+																						SyntaxFactory.ElseClause(
+																							SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"))
 																						)
 																					)
-																				: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Remote.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
-																				: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Local.ManualSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
+																				: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
+																				: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
 																				: null
 																		)
 																	)

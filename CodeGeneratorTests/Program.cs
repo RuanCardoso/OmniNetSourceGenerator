@@ -1,4 +1,6 @@
 ﻿using Omni.Core;
+using System;
+using System.Collections.Generic;
 
 public partial class Program : NetworkBehaviour
 {
@@ -13,7 +15,12 @@ namespace OmniNet
 	public partial class PlayerBaseRoot : Program
 	{
 		[NetworkVariable]
-		private float m_Aber = 100f;
+		private ObservableDictionary<int, int> m_Aber = new();
+
+		void a()
+		{
+			
+		}
 	}
 
 

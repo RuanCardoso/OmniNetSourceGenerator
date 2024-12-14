@@ -20,6 +20,13 @@ namespace Omni.Core
 
 	}
 
+	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+	public sealed class HidePicker : Attribute
+	{
+
+	}
+
+
 
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 	public class ServiceAttribute : Attribute

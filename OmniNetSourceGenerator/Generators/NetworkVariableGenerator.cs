@@ -5,6 +5,7 @@ using SourceGenerator.Extensions;
 using SourceGenerator.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 
@@ -57,11 +58,7 @@ namespace OmniNetSourceGenerator
 									List<SwitchSectionSyntax> sections = new List<SwitchSectionSyntax>();
 									List<MethodDeclarationSyntax> onChangedHandlers = new List<MethodDeclarationSyntax>();
 
-									List<StatementSyntax> onNotifyHandlers = new List<StatementSyntax>();
-									List<StatementSyntax> onNotifyEditorHandlers = new List<StatementSyntax>
-									{
-										SyntaxFactory.ParseStatement($"___NotifyEditorChange___Called = true;")
-									};
+									List<StatementSyntax> onNotifyCollectionHandlers = new List<StatementSyntax>();
 
 									HashSet<byte> ids = new HashSet<byte>();
 									foreach (MemberDeclarationSyntax member in @class.Members)
@@ -110,22 +107,28 @@ namespace OmniNetSourceGenerator
 											}
 										}
 
+										var typeString = declarationType.ToString();
 										if (member is PropertyDeclarationSyntax propSyntax)
 										{
+											string identifierName = propSyntax.Identifier.Text;
 											while (ids.Contains(id))
 											{
 												id++;
 											}
 
 											ids.Add(id);
-											sections.Add(CreateSection(id.ToString(), propSyntax.Identifier.Text, declarationType.ToString(), isSerializable, withPeer, isServer));
+											sections.Add(CreateSection(id.ToString(), identifierName, typeString, isSerializable, withPeer, isServer));
 
-											onChangedHandlers.Add(CreatePartialHandler(propSyntax.Identifier.Text, declarationType.ToString()));
-											onChangedHandlers.Add(CreateVirtualHandler(propSyntax.Identifier.Text, declarationType.ToString()));
-											onChangedHandlers.Add(CreateSyncMethod(propSyntax.Identifier.Text, id.ToString(), baseClassName));
+											onChangedHandlers.Add(CreatePartialHandler(identifierName, typeString));
+											onChangedHandlers.Add(CreateVirtualHandler(identifierName, typeString));
+											onChangedHandlers.Add(CreateSyncMethod(identifierName, id.ToString(), baseClassName));
 
-											onNotifyHandlers.Add(SyntaxFactory.ParseStatement($"{propSyntax.Identifier.Text} = m_{propSyntax.Identifier.Text};"));
-											onNotifyEditorHandlers.Add(SyntaxFactory.ParseStatement($"{propSyntax.Identifier.Text} = m_{propSyntax.Identifier.Text};"));
+											if (typeString.StartsWith("ObservableDictionary") || typeString.StartsWith("ObservableList"))
+											{
+												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnItemAdded += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
+												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnItemRemoved += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
+												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnItemUpdated += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
+											}
 										}
 										else if (member is FieldDeclarationSyntax fieldSyntax)
 										{
@@ -151,14 +154,18 @@ namespace OmniNetSourceGenerator
 												}
 
 												ids.Add(id);
-												sections.Add(CreateSection(id.ToString(), variableName, declarationType.ToString(), isSerializable, withPeer, isServer));
+												sections.Add(CreateSection(id.ToString(), variableName, typeString, isSerializable, withPeer, isServer));
 
-												onChangedHandlers.Add(CreatePartialHandler(variableName, declarationType.ToString()));
-												onChangedHandlers.Add(CreateVirtualHandler(variableName, declarationType.ToString()));
+												onChangedHandlers.Add(CreatePartialHandler(variableName, typeString));
+												onChangedHandlers.Add(CreateVirtualHandler(variableName, typeString));
 												onChangedHandlers.Add(CreateSyncMethod(variableName, id.ToString(), baseClassName));
 
-												onNotifyHandlers.Add(SyntaxFactory.ParseStatement($"{variableName} = m_{variableName};"));
-												onNotifyEditorHandlers.Add(SyntaxFactory.ParseStatement($"{variableName} = m_{variableName};"));
+												if (typeString.StartsWith("ObservableDictionary") || typeString.StartsWith("ObservableList"))
+												{
+													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnItemAdded += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
+													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnItemRemoved += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
+													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnItemUpdated += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
+												}
 											}
 										}
 									}
@@ -214,33 +221,22 @@ namespace OmniNetSourceGenerator
 										SyntaxFactory.ParseStatement("buffer.SeekToBegin();"),
 										SyntaxFactory.ParseStatement("base.___OnPropertyChanged___(propertyName, propertyId, peer, buffer);")));
 
-									onNotifyHandlers.Add(SyntaxFactory.ParseStatement($"base.___NotifyChange___();"));
-									onNotifyEditorHandlers.Add(SyntaxFactory.ParseStatement($"base.___NotifyEditorChange___();"));
+									onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"base.___NotifyCollectionChange___();"));
 
-									MethodDeclarationSyntax onNotifyChange = SyntaxFactory
-										.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "___NotifyChange___")
+									MethodDeclarationSyntax onNotifyCollectionChange = SyntaxFactory
+										.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "___NotifyCollectionChange___")
 										.WithModifiers(
 											SyntaxFactory.TokenList(
 												SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
 												SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
 											)
-										).WithBody(SyntaxFactory.Block(SyntaxFactory.List(onNotifyHandlers)));
-
-									MethodDeclarationSyntax onNotifyEditorChange = SyntaxFactory
-										.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "___NotifyEditorChange___")
-										.WithModifiers(
-											SyntaxFactory.TokenList(
-												SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
-												SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
-											)
-										).WithBody(SyntaxFactory.Block(SyntaxFactory.List(onNotifyEditorHandlers)));
+										).WithBody(SyntaxFactory.Block(SyntaxFactory.List(onNotifyCollectionHandlers)));
 
 									parentClass = parentClass.AddMembers(
 										onServerPropertyChanged,
 										onClientPropertyChanged,
 										onPropertyChanged,
-										onNotifyChange,
-										onNotifyEditorChange
+										onNotifyCollectionChange
 									);
 
 									parentClass = parentClass.AddMembers(onChangedHandlers.ToArray());
@@ -348,22 +344,16 @@ namespace OmniNetSourceGenerator
 						baseClassName == "NetworkBehaviour"
 							? SyntaxFactory
 								.IfStatement(
-									SyntaxFactory.ParseExpression("IsMine"),
-									SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Local.ManualSync({propertyName}, {propertyId}, options);"))
+									SyntaxFactory.ParseExpression("IsClient"),
+									SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({propertyName}, {propertyId}, options);"))
 								)
 								.WithElse(
 									SyntaxFactory.ElseClause(
-										SyntaxFactory.Block(
-											SyntaxFactory.IfStatement(
-												SyntaxFactory.ParseExpression("IsServer"),
-												SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Remote.ManualSync({propertyName}, {propertyId}, options);")),
-												SyntaxFactory.ElseClause(SyntaxFactory.Block(SyntaxFactory.ParseStatement("throw new System.InvalidOperationException(\"You are trying to modify a variable that you have no authority over, be sure to check IsMine/IsLocalPlayer/IsServer/IsClient.\");")))
-											)
-										)
+										SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);"))
 									)
 								)
-							: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Remote.ManualSync({propertyName}, {propertyId}, options);")
-							: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Local.ManualSync({propertyName}, {propertyId}, options);")
+							: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);")
+							: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({propertyName}, {propertyId}, options);")
 							: null
 					)
 				);
@@ -410,7 +400,7 @@ namespace OmniNetSourceGenerator
 		}
 
 		private SwitchSectionSyntax CreateSection(
-			string caseExpression,
+			string caseExpression, // propertyId
 			string propertyName,
 			string propertyType,
 			bool isSerializable,
@@ -432,7 +422,7 @@ namespace OmniNetSourceGenerator
 							SyntaxFactory.Block(
 								SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
 								SyntaxFactory.ParseStatement($"var nextValue = buffer.ReadAsBinary<{propertyType}>();"),
-								SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"!OnNetworkVariableDeepEquals(m_{propertyName}, nextValue, propertyName)"),
+								SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"!OnNetworkVariableDeepEquals(m_{propertyName}, nextValue, propertyName, {caseExpression})"),
 								SyntaxFactory.Block(SyntaxFactory.ParseStatement($"On{propertyName}Changed(m_{propertyName}, nextValue, false);"),
 								SyntaxFactory.ParseStatement($"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"),
 								SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;")),

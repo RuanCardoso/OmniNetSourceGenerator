@@ -21,6 +21,13 @@ namespace UnityEngine
 	}
 }
 
+public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue> where TKey : notnull
+{
+	public event Action<int, int> OnItemAdded;
+	public event Action<int, int> OnItemRemoved;
+	public event Action<int, int> OnItemUpdated;
+}
+
 public class NetVarBehaviour { }
 public class DataBuffer : IDisposable
 {
@@ -349,38 +356,21 @@ public class ServerBehaviour
 
 	}
 
-	/// <summary>
-	/// Compares two values of type T for deep equality.
-	/// </summary>
-	/// <typeparam name="T">The type of the values to compare.</typeparam>
-	/// <param name="oldValue">The old value to compare.</param>
-	/// <param name="newValue">The new value to compare.</param>
-	/// <returns>True if the values are deeply equal; otherwise, false.</returns>
-	protected bool DeepEquals<T>(T oldValue, T newValue, string name)
-	{
-		return true;
-	}
 
-	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name)
+	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
 	{
 		return false;
 	}
 
-	protected bool ___NotifyEditorChange___Called { get; set; } = false;
-	protected virtual void ___NotifyEditorChange___()
-	{
-		___NotifyEditorChange___Called = false;
-	}
-
-	protected virtual void ___NotifyChange___() { }
+	protected virtual void ___NotifyCollectionChange___() { }
 
 	public class Event
 	{
-		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	}
 
-	public Event2 Remote;
-	public Event2 Local;
+	public Event2 Server;
+	public Event2 Client;
 }
 
 public class ClientBehaviour
@@ -393,38 +383,20 @@ public class ClientBehaviour
 	)
 	{ }
 
-	protected virtual void ___NotifyChange___() { }
-	protected bool ___NotifyEditorChange___Called { get; set; } = false;
-	protected virtual void ___NotifyEditorChange___()
-	{
-		___NotifyEditorChange___Called = false;
-	}
+	protected virtual void ___NotifyCollectionChange___() { }
 
-
-	/// <summary>
-	/// Compares two values of type T for deep equality.
-	/// </summary>
-	/// <typeparam name="T">The type of the values to compare.</typeparam>
-	/// <param name="oldValue">The old value to compare.</param>
-	/// <param name="newValue">The new value to compare.</param>
-	/// <returns>True if the values are deeply equal; otherwise, false.</returns>
-	protected bool DeepEquals<T>(T oldValue, T newValue, string name)
-	{
-		return true;
-	}
-
-	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name)
+	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
 	{
 		return false;
 	}
 
 	public class Event
 	{
-		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	}
 
-	public Event2 Remote;
-	public Event2 Local;
+	public Event2 Server;
+	public Event2 Client;
 }
 
 public class DualBehaviour
@@ -437,44 +409,27 @@ public class DualBehaviour
 	)
 	{ }
 
-	/// <summary>
-	/// Compares two values of type T for deep equality.
-	/// </summary>
-	/// <typeparam name="T">The type of the values to compare.</typeparam>
-	/// <param name="oldValue">The old value to compare.</param>
-	/// <param name="newValue">The new value to compare.</param>
-	/// <returns>True if the values are deeply equal; otherwise, false.</returns>
-	protected bool DeepEquals<T>(T oldValue, T newValue, string name)
-	{
-		return true;
-	}
-
-	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name)
+	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
 	{
 		return false;
 	}
 
-	protected virtual void ___NotifyChange___() { }
-
-	protected bool ___NotifyEditorChange___Called { get; set; } = false;
-	protected virtual void ___NotifyEditorChange___()
-	{
-		___NotifyEditorChange___Called = false;
-	}
+	protected virtual void ___NotifyCollectionChange___() { }
 
 	public class Event
 	{
-		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	}
 
-	public Event2 Remote;
-	public Event2 Local;
+	public Event2 Server;
+	public Event2 Client;
 }
 
 public class NetworkBehaviour : NetVarBehaviour
 {
 	public bool IsMine => false;
 	public bool IsServer => false;
+	public bool IsClient => false;
 
 	public NetworkIdentity Identity { get; set; }
 
@@ -486,12 +441,7 @@ public class NetworkBehaviour : NetVarBehaviour
 	)
 	{ }
 
-	protected bool ___NotifyEditorChange___Called { get; set; } = false;
-	protected virtual void ___NotifyEditorChange___()
-	{
-		___NotifyEditorChange___Called = false;
-	}
-	protected virtual void ___NotifyChange___() { }
+	protected virtual void ___NotifyCollectionChange___() { }
 
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	[Obsolete("Don't override this method! The source generator will override it.")]
@@ -500,26 +450,14 @@ public class NetworkBehaviour : NetVarBehaviour
 
 	}
 
-	/// <summary>
-	/// Compares two values of type T for deep equality.
-	/// </summary>
-	/// <typeparam name="T">The type of the values to compare.</typeparam>
-	/// <param name="oldValue">The old value to compare.</param>
-	/// <param name="newValue">The new value to compare.</param>
-	/// <returns>True if the values are deeply equal; otherwise, false.</returns>
-	protected bool DeepEquals<T>(T oldValue, T newValue, string name)
-	{
-		return true;
-	}
-
-	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name)
+	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
 	{
 		return false;
 	}
 
 	public class Event
 	{
-		public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 
 		public void Invoke(byte msgId, ServerOptions options) { }
 		public void Invoke(byte msgId, ClientOptions options) { }
@@ -528,7 +466,7 @@ public class NetworkBehaviour : NetVarBehaviour
 		public void Invoke<T1>(byte msgId, T1 p1, ClientOptions options = default)
 				where T1 : unmanaged
 		{
-			
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -536,7 +474,7 @@ public class NetworkBehaviour : NetVarBehaviour
 			where T1 : unmanaged
 			where T2 : unmanaged
 		{
-		
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -551,7 +489,7 @@ public class NetworkBehaviour : NetVarBehaviour
 			where T2 : unmanaged
 			where T3 : unmanaged
 		{
-		
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -568,7 +506,7 @@ public class NetworkBehaviour : NetVarBehaviour
 			where T3 : unmanaged
 			where T4 : unmanaged
 		{
-		
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -587,14 +525,14 @@ public class NetworkBehaviour : NetVarBehaviour
 			where T4 : unmanaged
 			where T5 : unmanaged
 		{
-		
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void Invoke<T1>(byte msgId, T1 p1, ServerOptions options = default)
 				where T1 : unmanaged
 		{
-			
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -602,7 +540,7 @@ public class NetworkBehaviour : NetVarBehaviour
 			where T1 : unmanaged
 			where T2 : unmanaged
 		{
-		
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -617,7 +555,7 @@ public class NetworkBehaviour : NetVarBehaviour
 			where T2 : unmanaged
 			where T3 : unmanaged
 		{
-			
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -634,7 +572,7 @@ public class NetworkBehaviour : NetVarBehaviour
 			where T3 : unmanaged
 			where T4 : unmanaged
 		{
-		
+
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -653,17 +591,17 @@ public class NetworkBehaviour : NetVarBehaviour
 			where T4 : unmanaged
 			where T5 : unmanaged
 		{
-		
+
 		}
 	}
 
-	public Event Remote;
-	public Event Local;
+	public Event Server;
+	public Event Client;
 }
 
 public class Event2
 {
-	public void ManualSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+	public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	public void Invoke(byte msgId, NetworkPeer peer, ServerOptions options) { }
 	public void Invoke(byte msgId, ClientOptions options) { }
 
@@ -671,7 +609,7 @@ public class Event2
 	public void Invoke<T1>(byte msgId, NetworkPeer peer, T1 p1, ServerOptions options = default)
 			where T1 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -685,7 +623,7 @@ public class Event2
 		where T1 : unmanaged
 		where T2 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -701,7 +639,7 @@ public class Event2
 		where T2 : unmanaged
 		where T3 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -719,7 +657,7 @@ public class Event2
 		where T3 : unmanaged
 		where T4 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -739,14 +677,14 @@ public class Event2
 		where T4 : unmanaged
 		where T5 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Invoke<T1>(byte msgId, T1 p1, ClientOptions options = default)
 			where T1 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -754,7 +692,7 @@ public class Event2
 		where T1 : unmanaged
 		where T2 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -769,7 +707,7 @@ public class Event2
 		where T2 : unmanaged
 		where T3 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -786,7 +724,7 @@ public class Event2
 		where T3 : unmanaged
 		where T4 : unmanaged
 	{
-		
+
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -805,6 +743,6 @@ public class Event2
 		where T4 : unmanaged
 		where T5 : unmanaged
 	{
-		
+
 	}
 }
