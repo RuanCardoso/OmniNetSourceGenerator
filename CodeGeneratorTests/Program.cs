@@ -2,11 +2,8 @@
 using System;
 using System.Collections.Generic;
 
-public partial class Program : NetworkBehaviour
+public partial class Program : ServerBehaviour
 {
-	[NetworkVariable]
-	private float m_Aber = 100f;
-
 	public static void Main(string[] args) { }
 }
 
@@ -16,6 +13,12 @@ namespace OmniNet
 	{
 		[NetworkVariable]
 		private ObservableDictionary<int, int> m_Aber = new();
+
+		[NetworkVariable]
+		private float m_AA = 100f;
+
+		[NetworkVariable]
+		private float m_DDD = 100f;
 
 		void a()
 		{

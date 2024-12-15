@@ -59,6 +59,7 @@ namespace OmniNetSourceGenerator
 									List<MethodDeclarationSyntax> onChangedHandlers = new List<MethodDeclarationSyntax>();
 
 									List<StatementSyntax> onNotifyCollectionHandlers = new List<StatementSyntax>();
+									List<StatementSyntax> onNotifyInitialStateHandlers = new List<StatementSyntax>();
 
 									HashSet<byte> ids = new HashSet<byte>();
 									foreach (MemberDeclarationSyntax member in @class.Members)
@@ -130,6 +131,8 @@ namespace OmniNetSourceGenerator
 												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnItemUpdated += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
 												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnUpdate += (isSend) => {{if(isSend) Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);}};"));
 											}
+
+											onNotifyInitialStateHandlers.Add(CreateSyncInitialState(identifierName, id.ToString(), baseClassName));
 										}
 										else if (member is FieldDeclarationSyntax fieldSyntax)
 										{
@@ -168,6 +171,8 @@ namespace OmniNetSourceGenerator
 													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnItemUpdated += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
 													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnUpdate += (isSend) => {{if(isSend) Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);}};"));
 												}
+
+												onNotifyInitialStateHandlers.Add(CreateSyncInitialState(variableName, id.ToString(), baseClassName));
 											}
 										}
 									}
@@ -234,11 +239,27 @@ namespace OmniNetSourceGenerator
 											)
 										).WithBody(SyntaxFactory.Block(SyntaxFactory.List(onNotifyCollectionHandlers)));
 
+									onNotifyInitialStateHandlers.Add(SyntaxFactory.ParseStatement($"base.SyncNetworkState(peer);"));
+
+									MethodDeclarationSyntax onNotifyInitialStateUpdate = SyntaxFactory
+										.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "SyncNetworkState")
+										.WithModifiers(
+											SyntaxFactory.TokenList(
+												SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
+												SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
+											)
+										).WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(
+											new ParameterSyntax[] {
+											SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer"))
+										})))
+										.WithBody(SyntaxFactory.Block(SyntaxFactory.List(onNotifyInitialStateHandlers)));
+
 									parentClass = parentClass.AddMembers(
 										onServerPropertyChanged,
 										onClientPropertyChanged,
 										onPropertyChanged,
-										onNotifyCollectionChange
+										onNotifyCollectionChange,
+										onNotifyInitialStateUpdate
 									);
 
 									parentClass = parentClass.AddMembers(onChangedHandlers.ToArray());
@@ -356,9 +377,21 @@ namespace OmniNetSourceGenerator
 								)
 							: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);")
 							: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({propertyName}, {propertyId}, options);")
-							: null
+							: SyntaxFactory.EmptyStatement()
 					)
 				);
+		}
+
+		private StatementSyntax CreateSyncInitialState(string propertyName, string propertyId, string baseClassName) // Only Server
+		{
+			return baseClassName == "NetworkBehaviour"
+				 ? SyntaxFactory
+					 .IfStatement(
+						 SyntaxFactory.ParseExpression("IsServer"),
+						 SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);"))
+					 )
+				 : baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);")
+				 : SyntaxFactory.EmptyStatement();
 		}
 
 		private MethodDeclarationSyntax CreatePartialHandler(string propertyName, string type)

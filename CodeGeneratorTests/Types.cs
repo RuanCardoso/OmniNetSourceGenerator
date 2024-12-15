@@ -29,7 +29,14 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue> where
 	public Action<bool> OnUpdate; // true to send to players
 }
 
-public class NetVarBehaviour { }
+public class NetVarBehaviour {
+
+	protected virtual void SyncNetworkState(NetworkPeer peer)
+	{
+	}
+}
+
+
 public class DataBuffer : IDisposable
 {
 	public int Length { get; set; }
@@ -340,7 +347,7 @@ public class NetPool()
 	}
 }
 
-public class ServerBehaviour
+public class ServerBehaviour : NetVarBehaviour
 {
 	protected virtual void ___OnPropertyChanged___(
 		string propertyName,
@@ -368,13 +375,25 @@ public class ServerBehaviour
 	public class Event
 	{
 		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+
+		/// <summary>
+		/// Sends a manual 'NetworkVariable' message to a specific client with the specified property and property ID.
+		/// </summary>
+		/// <typeparam name="T">The type of the property to synchronize.</typeparam>
+		/// <param name="property">The property value to synchronize.</param>
+		/// <param name="propertyId">The ID of the property being synchronized.</param>
+		/// <param name="peer">The target client to receive the 'NetworkVariable' message.</param>
+		public void NetworkVariableSyncToPeer<T>(T property, byte propertyId, NetworkPeer peer)
+		{
+
+		}
 	}
 
 	public Event2 Server;
 	public Event2 Client;
 }
 
-public class ClientBehaviour
+public class ClientBehaviour : NetVarBehaviour
 {
 	protected virtual void ___OnPropertyChanged___(
 		string propertyName,
@@ -458,6 +477,17 @@ public class NetworkBehaviour : NetVarBehaviour
 
 	public class Event
 	{
+		/// <summary>
+		/// Sends a manual 'NetworkVariable' message to a specific client with the specified property and property ID.
+		/// </summary>
+		/// <typeparam name="T">The type of the property to synchronize.</typeparam>
+		/// <param name="property">The property value to synchronize.</param>
+		/// <param name="propertyId">The ID of the property being synchronized.</param>
+		/// <param name="peer">The target client to receive the 'NetworkVariable' message.</param>
+		public void NetworkVariableSyncToPeer<T>(T property, byte propertyId, NetworkPeer peer)
+		{
+
+		}
 		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 
 		public void Invoke(byte msgId, ServerOptions options) { }
@@ -602,6 +632,17 @@ public class NetworkBehaviour : NetVarBehaviour
 
 public class Event2
 {
+	/// <summary>
+	/// Sends a manual 'NetworkVariable' message to a specific client with the specified property and property ID.
+	/// </summary>
+	/// <typeparam name="T">The type of the property to synchronize.</typeparam>
+	/// <param name="property">The property value to synchronize.</param>
+	/// <param name="propertyId">The ID of the property being synchronized.</param>
+	/// <param name="peer">The target client to receive the 'NetworkVariable' message.</param>
+	public void NetworkVariableSyncToPeer<T>(T property, byte propertyId, NetworkPeer peer)
+	{
+
+	}
 	public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
 	public void Invoke(byte msgId, NetworkPeer peer, ServerOptions options) { }
 	public void Invoke(byte msgId, ClientOptions options) { }
