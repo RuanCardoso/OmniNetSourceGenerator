@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TriInspector
+namespace Omni.Inspector
 {
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 	public sealed class Group : Attribute
