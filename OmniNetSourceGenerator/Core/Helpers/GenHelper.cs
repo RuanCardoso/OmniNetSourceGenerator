@@ -5,14 +5,14 @@ namespace SourceGenerator.Helpers
 {
 	public static class GenHelper
 	{
-		public static void ReportInheritanceRequirement(GeneratorExecutionContext context)
+		public static void ReportInheritanceRequirement(GeneratorExecutionContext context, string className)
 		{
 			context.ReportDiagnostic(
 				Diagnostic.Create(
 					new DiagnosticDescriptor(
 						"OMNI001",
 						"Class Inheritance Constraint Violation",
-						"The class must inherit from any `NetworkEventBase` or `NetworkBehaviour` to ensure proper network functionality.",
+						$"The class({className}) must inherit from any `NetworkEventBase` or `NetworkBehaviour` to ensure proper network functionality.",
 						"Design",
 						DiagnosticSeverity.Error,
 						isEnabledByDefault: true
@@ -22,14 +22,14 @@ namespace SourceGenerator.Helpers
 			);
 		}
 
-		public static void ReportPartialKeywordRequirement(GeneratorExecutionContext context)
+		public static void ReportPartialKeywordRequirement(GeneratorExecutionContext context, string className)
 		{
 			context.ReportDiagnostic(
 				Diagnostic.Create(
 					new DiagnosticDescriptor(
 						"OMNI002",
 						"Partial Keyword Missing",
-						"The class definition must include the 'partial' keyword to enable proper functionality in this context.",
+						$"The class({className}) definition must include the 'partial' keyword to enable proper functionality in this context.",
 						"Design",
 						DiagnosticSeverity.Error,
 						isEnabledByDefault: true
@@ -48,7 +48,7 @@ namespace SourceGenerator.Helpers
 						new DiagnosticDescriptor(
 							"OMNI003",
 							"Invalid Field Naming Convention",
-							"The field name prefixed with 'm_' must have its first letter capitalized, such as 'm_Power'. Please correct the naming convention.",
+							$"The field({fieldName}) name prefixed with 'm_' must have its first letter capitalized, such as 'm_Power'. Please correct the naming convention.",
 							"Design",
 							DiagnosticSeverity.Error,
 							isEnabledByDefault: true

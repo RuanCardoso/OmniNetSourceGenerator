@@ -280,12 +280,12 @@ namespace OmniNetSourceGenerator
 								}
 								else
 								{
-									GenHelper.ReportInheritanceRequirement(context);
+									GenHelper.ReportInheritanceRequirement(context, fromClass.Identifier.Text);
 								}
 							}
 							else
 							{
-								GenHelper.ReportPartialKeywordRequirement(context);
+								GenHelper.ReportPartialKeywordRequirement(context, fromClass.Identifier.Text);
 							}
 						}
 					}
