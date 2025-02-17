@@ -1,23 +1,12 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace SourceGenerator.Extensions
 {
-	public class ClassStructure
-	{
-		public ClassDeclarationSyntax ParentClass { get; }
-		public IEnumerable<MemberDeclarationSyntax> Members { get; }
-
-		public ClassStructure(ClassDeclarationSyntax parentClass, IEnumerable<MemberDeclarationSyntax> members)
-		{
-			ParentClass = parentClass;
-			Members = members;
-		}
-	}
-
 	public static class GenExtensions
 	{
 		public static bool HasAttribute(this MemberDeclarationSyntax member, string attributeName)
@@ -32,13 +21,12 @@ namespace SourceGenerator.Extensions
 
 		public static IEnumerable<AttributeSyntax> GetAttributes(this MemberDeclarationSyntax member, string attributeName)
 		{
-			return member.AttributeLists
-			 .SelectMany(x =>
-				  x.Attributes.Where(y =>
-					  y.ArgumentList != null &&
-					  y.ArgumentList.Arguments.Count > 0 && y.Name.ToString() == attributeName
-				  )
-			 );
+			return member.AttributeLists.SelectMany(x => x.Attributes.Where(y => y.Name.ToString() == attributeName));
+		}
+
+		public static AttributeSyntax GetAttribute(this MemberDeclarationSyntax member, string attributeName)
+		{
+			return member.GetAttributes(attributeName).FirstOrDefault();
 		}
 
 		public static IEnumerable<AttributeSyntax> GetAttributes(this MemberDeclarationSyntax member, params string[] attributeNames)
@@ -46,9 +34,9 @@ namespace SourceGenerator.Extensions
 			return attributeNames.SelectMany(x => member.GetAttributes(x));
 		}
 
-		public static IEnumerable<ClassStructure> GroupMembersByParentClass(this IEnumerable<MemberDeclarationSyntax> members)
+		public static IEnumerable<ClassStructure> GroupByDeclaringClass(this IEnumerable<MemberDeclarationSyntax> members)
 		{
-			return members.GroupBy(member => ((ClassDeclarationSyntax)member.Parent)).Select(group => new ClassStructure(group.Key, group));
+			return members.GroupBy(member => (ClassDeclarationSyntax)member.Parent).Select(group => new ClassStructure(group.Key, group));
 		}
 
 		public static IEnumerable<T> GetDescendantsOfType<T>(this SyntaxNode node) where T : SyntaxNode
@@ -88,10 +76,12 @@ namespace SourceGenerator.Extensions
 		public static int GetBaseDepth(this ClassDeclarationSyntax @class, SemanticModel semanticModel, params string[] rootBases)
 		{
 			if (!(semanticModel.GetDeclaredSymbol(@class) is INamedTypeSymbol classSymbol))
+			{
 				return -1;
+			}
 
-			INamedTypeSymbol currentBase = classSymbol.BaseType;
 			int depth = 0;
+			INamedTypeSymbol currentBase = classSymbol.BaseType;
 			while (currentBase != null)
 			{
 				++depth;
@@ -106,15 +96,17 @@ namespace SourceGenerator.Extensions
 			return depth;
 		}
 
-		public static bool InheritsFrom(this ClassDeclarationSyntax classDeclaration, SemanticModel semanticModel, string baseTypeName)
+		public static bool InheritsFromClass(this ClassDeclarationSyntax classDeclaration, SemanticModel semanticModel, string baseName)
 		{
 			if (!(semanticModel.GetDeclaredSymbol(classDeclaration) is INamedTypeSymbol classSymbol))
+			{
 				return false;
+			}
 
 			INamedTypeSymbol currentBase = classSymbol.BaseType;
 			while (currentBase != null)
 			{
-				if (currentBase.Name == baseTypeName || currentBase.ToDisplayString() == baseTypeName)
+				if (currentBase.Name == baseName || currentBase.ToDisplayString() == baseName)
 					return true;
 
 				currentBase = currentBase.BaseType;
@@ -123,19 +115,95 @@ namespace SourceGenerator.Extensions
 			return false;
 		}
 
-		public static bool InheritsFrom(this ClassDeclarationSyntax classDeclaration, SemanticModel semanticModel, params string[] baseTypeNames)
+		public static bool InheritsFromInterface(this TypeSyntax type, SemanticModel semanticModel, string interfaceName)
 		{
-			return baseTypeNames.Any(x => classDeclaration.InheritsFrom(semanticModel, x));
+			ITypeSymbol typeSymbol = semanticModel.GetTypeInfo(type).Type;
+			if (typeSymbol == null)
+				return false;
+
+			return typeSymbol.AllInterfaces.Any(x => x.Name == interfaceName || x.ToDisplayString() == interfaceName);
 		}
 
-		public static bool InheritsFrom(this ClassDeclarationSyntax @class, string baseType)
+		public static bool InheritsFromInterface(this TypeSyntax type, SemanticModel semanticModel, params string[] interfaceNames)
 		{
-			return @class.BaseList != null && @class.BaseList.Types.Any(x => x.ToString().Contains(baseType));
+			return interfaceNames.Any(x => type.InheritsFromInterface(semanticModel, x));
 		}
 
-		public static bool InheritsFrom(this ClassDeclarationSyntax @class, params string[] baseType)
+		public static bool InheritsFromClass(this ClassDeclarationSyntax classDeclaration, SemanticModel semanticModel, params string[] baseNames)
 		{
-			return baseType.Any(x => @class.InheritsFrom(x));
+			return baseNames.Any(x => classDeclaration.InheritsFromClass(semanticModel, x));
+		}
+
+		public static bool InheritsFromClass(this ClassDeclarationSyntax @class, string baseName)
+		{
+			return @class.BaseList != null && @class.BaseList.Types.Any(x => x.ToString().Contains(baseName));
+		}
+
+		public static bool InheritsFromClass(this ClassDeclarationSyntax @class, params string[] baseNames)
+		{
+			return baseNames.Any(x => @class.InheritsFromClass(x));
+		}
+
+		public static T GetArgumentExpression<T>(this AttributeSyntax attribute, string argumentName, ArgumentIndex index) where T : ExpressionSyntax
+		{
+			int i = (int)index;
+			return attribute.GetArgumentExpression<T>(argumentName, i);
+		}
+
+		/// <summary>
+		/// Retrieves an argument expression from the specified attribute and returns it cast to the specified type <typeparamref name="T"/>.
+		/// The search is performed by first matching a named argument (<paramref name="argumentName"/>) and, if not found,
+		/// by using the argument at the specified <paramref name="argumentIndex"/>.
+		/// </summary>
+		/// <typeparam name="T">The type of the expression to retrieve, which must be a subclass of <see cref="Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax"/>.</typeparam>
+		/// <param name="attribute">The attribute syntax from which to extract the argument expression.</param>
+		/// <param name="argumentName">The name of the argument to look for in the attribute's argument list.</param>
+		/// <param name="argumentIndex">The index of the argument to fetch if a named argument match is not found.</param>
+		/// <returns>
+		/// The argument expression cast to type <typeparamref name="T"/>, or <c>null</c> if the argument is not found,
+		/// not of the expected type, or if an exception occurs during the extraction process.
+		/// </returns>
+		public static T GetArgumentExpression<T>(this AttributeSyntax attribute, string argumentName, int argumentIndex) where T : ExpressionSyntax
+		{
+			try
+			{
+				if (attribute.ArgumentList == null)
+					return null;
+
+				var arguments = attribute.ArgumentList.Arguments.ToArray();
+				if (arguments.Length == 0)
+					return null;
+
+				foreach (var argument in arguments)
+				{
+					if (argument.NameColon?.Name is IdentifierNameSyntax nameColon &&
+						string.Equals(nameColon.Identifier.Text, argumentName, StringComparison.OrdinalIgnoreCase))
+					{
+						return argument.Expression as T;
+					}
+
+					if (argument.NameEquals?.Name is IdentifierNameSyntax nameEquals &&
+						string.Equals(nameEquals.Identifier.Text, argumentName, StringComparison.OrdinalIgnoreCase))
+					{
+						return argument.Expression as T;
+					}
+				}
+
+				if (argumentIndex >= 0 && argumentIndex < arguments.Length)
+				{
+					var indexedArgument = arguments[argumentIndex].Expression;
+					if (indexedArgument is T typedArgument)
+					{
+						return typedArgument;
+					}
+				}
+
+				return null;
+			}
+			catch
+			{
+				return null;
+			}
 		}
 	}
 }
