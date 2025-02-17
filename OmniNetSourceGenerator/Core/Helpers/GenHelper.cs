@@ -1,60 +1,89 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SourceGenerator.Extensions;
 
 namespace SourceGenerator.Helpers
 {
 	public static class GenHelper
 	{
-		public static void ReportInheritanceRequirement(GeneratorExecutionContext context, string className)
+		public static readonly DiagnosticDescriptor InvalidFieldNamingConventionIsUpper = new DiagnosticDescriptor(
+			id: "OMNI003",
+			title: "Invalid Field Name Capitalization",
+			messageFormat: "Field '{0}' with 'm_' prefix must follow PascalCase convention (e.g., 'm_PlayerHealth')",
+			category: "Naming",
+			defaultSeverity: DiagnosticSeverity.Error,
+			isEnabledByDefault: true,
+			description: "Fields using the 'm_' prefix must follow PascalCase naming convention where the first letter after 'm_' is uppercase. This helps maintain consistent code style and readability across the codebase."
+		);
+
+		public static readonly DiagnosticDescriptor InvalidFieldNamingConventionStartsWith = new DiagnosticDescriptor(
+			id: "OMNI004",
+			title: "Missing Required Field Prefix",
+			messageFormat: "Field '{0}' must start with 'm_' prefix and follow PascalCase convention",
+			category: "Naming",
+			defaultSeverity: DiagnosticSeverity.Error,
+			isEnabledByDefault: true,
+			description: "Member fields in this codebase must start with 'm_' prefix followed by PascalCase naming " +
+				"(e.g., 'm_PlayerHealth', 'm_IsActive'). This convention helps distinguish member fields " +
+				"from local variables and improves code readability."
+		);
+
+		public static readonly DiagnosticDescriptor PartialKeywordMissing = new DiagnosticDescriptor(
+			id: "OMNI002",
+			title: "Missing 'partial' Keyword in Source Generator Class",
+			messageFormat: "Class '{0}' must be declared with the 'partial' keyword to support source generation functionality",
+			category: "Source Generation",
+			defaultSeverity: DiagnosticSeverity.Error,
+			isEnabledByDefault: true,
+			description: "When using source generators, target classes must be declared as 'partial' to allow the generator to add members. " +
+				"This enables the compiler to combine the original class with the generated code."
+		);
+
+		public static readonly DiagnosticDescriptor InheritanceConstraintViolation = new DiagnosticDescriptor(
+			id: "OMNI001",
+			title: "Missing Network Inheritance",
+			messageFormat: "Class '{0}' must inherit from a network class (NetworkBehaviour, ServerBehaviour, or ClientBehaviour)",
+			category: "Networking",
+			defaultSeverity: DiagnosticSeverity.Error,
+			isEnabledByDefault: true,
+			description: "Classes using network functionality must inherit from one of the following base classes:\n" +
+						"- NetworkBehaviour: For general network synchronization\n" +
+						"- ServerBehaviour: For server-specific network logic\n" +
+						"- ClientBehaviour: For client-specific network logic\n" +
+						"This ensures proper network functionality and synchronization capabilities."
+		);
+
+		public static void ReportInheritanceRequirement(Context context, string className, Location location = null)
 		{
 			context.ReportDiagnostic(
-				Diagnostic.Create(
-					new DiagnosticDescriptor(
-						"OMNI001",
-						"Class Inheritance Constraint Violation",
-						$"The class({className}) must inherit from any `NetworkEventBase` or `NetworkBehaviour` to ensure proper network functionality.",
-						"Design",
-						DiagnosticSeverity.Error,
-						isEnabledByDefault: true
-					),
-					Location.None
-				)
+				InheritanceConstraintViolation,
+				location,
+				className
 			);
 		}
 
-		public static void ReportPartialKeywordRequirement(GeneratorExecutionContext context, string className)
+		public static void ReportPartialKeywordRequirement(Context context, ClassDeclarationSyntax @class, Location location = null)
 		{
-			context.ReportDiagnostic(
-				Diagnostic.Create(
-					new DiagnosticDescriptor(
-						"OMNI002",
-						"Partial Keyword Missing",
-						$"The class({className}) definition must include the 'partial' keyword to enable proper functionality in this context.",
-						"Design",
-						DiagnosticSeverity.Error,
-						isEnabledByDefault: true
-					),
-					Location.None
-				)
-			);
+			if (!@class.HasModifier(SyntaxKind.PartialKeyword))
+			{
+				string className = @class.Identifier.Text;
+				context.ReportDiagnostic(
+					PartialKeywordMissing,
+					location,
+					className
+				);
+			}
 		}
 
-		public static bool ReportInvalidFieldNamingConvention(GeneratorExecutionContext context, string fieldName)
+		public static bool ReportInvalidFieldNamingIsUpper(Context context, string fieldName, Location location = null)
 		{
 			if (!char.IsUpper(fieldName[0]))
 			{
 				context.ReportDiagnostic(
-					Diagnostic.Create(
-						new DiagnosticDescriptor(
-							"OMNI003",
-							"Invalid Field Naming Convention",
-							$"The field({fieldName}) name prefixed with 'm_' must have its first letter capitalized, such as 'm_Power'. Please correct the naming convention.",
-							"Design",
-							DiagnosticSeverity.Error,
-							isEnabledByDefault: true
-						),
-						Location.None
-					)
+					InvalidFieldNamingConventionIsUpper,
+					location,
+					fieldName
 				);
 
 				return true;
@@ -63,22 +92,14 @@ namespace SourceGenerator.Helpers
 			return false;
 		}
 
-		public static bool ReportInvalidFieldNaming(GeneratorExecutionContext context, string fieldName)
+		public static bool ReportInvalidFieldNamingStartsWith(Context context, string fieldName, Location location = null)
 		{
 			if (!fieldName.StartsWith("m_"))
 			{
 				context.ReportDiagnostic(
-					Diagnostic.Create(
-						new DiagnosticDescriptor(
-							"OMNI004",
-							"Invalid Field Naming Convention",
-							$"The field '{fieldName}' does not follow the required naming convention. It should start with 'm_' and be in PascalCase, such as 'm_FieldName'. Please update the field name to comply with this convention.",
-							"Design",
-							DiagnosticSeverity.Error,
-							isEnabledByDefault: true
-						),
-						Location.None
-					)
+					InvalidFieldNamingConventionStartsWith,
+					location,
+					fieldName
 				);
 
 				return true;
@@ -111,54 +132,15 @@ namespace SourceGenerator.Helpers
 			return false;
 		}
 
-
-		public static T GetArgumentExpression<T>(string argumentName, int argumentIndex, SeparatedSyntaxList<AttributeArgumentSyntax> arguments) where T : ExpressionSyntax
+		/// <summary>
+		/// Creates an empty statement.
+		/// </summary>
+		/// <returns>
+		/// An instance of <see cref="StatementSyntax"/> representing an empty statement.
+		/// </returns>
+		public static StatementSyntax EmptyStatement()
 		{
-			bool IsIdentifierName(IdentifierNameSyntax identifier)
-			{
-				return identifier.Identifier.Text.ToLowerInvariant() == argumentName.ToLowerInvariant();
-			}
-
-			foreach (AttributeArgumentSyntax argument in arguments)
-			{
-				if (argument.NameColon != null)
-				{
-					if (IsIdentifierName(argument.NameColon.Name))
-					{
-						return (T)argument.Expression;
-					}
-					else continue;
-				}
-				else if (argument.NameEquals != null)
-				{
-					if (IsIdentifierName(argument.NameEquals.Name))
-					{
-						return (T)argument.Expression;
-					}
-					else continue;
-				}
-				else
-				{
-					if (arguments.Count <= argumentIndex)
-						continue;
-
-					if (arguments[argumentIndex] != null)
-					{
-						if (arguments[argumentIndex].Expression is T indexedArgument) // Check expression compatibility ex: 'Literal' with 'Member' = false, 'Literal' with 'Literal' = true
-						{
-							// Check type and order compatibility, ex, Literal with Literal, Ok, but the first is a 'byte' and the second is a 'int', not ok... byte with byte Ok, int with int, Ok.
-							// Check if the expression is the same, if yes, Ok, if no, incorrect argument passed even if the two have the same type, this option will detect it.
-							if (argument.Expression == indexedArgument)
-								return indexedArgument;
-							else continue;
-						}
-						else continue;
-					}
-					else continue;
-				}
-			}
-
-			return null;
+			return SyntaxFactory.ParseStatement("");
 		}
 	}
 }
