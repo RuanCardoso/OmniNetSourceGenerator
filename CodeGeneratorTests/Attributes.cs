@@ -76,8 +76,41 @@ namespace Omni.Core
 
 	public class NetworkVariable : Attribute
 	{
-		public NetworkVariable(bool track = false) { }
+		public byte Id { get; set; }
 
-		public NetworkVariable(byte id) { }
+		/// <summary>
+		/// Gets or sets a value indicating whether the property requires client authority 
+		/// for synchronization.
+		/// </summary>
+		/// <value>
+		/// Default is <c>false</c>, meaning client authority is not required.
+		/// </value>
+		public bool IsClientAuthority { get; set; } = false;
+
+		/// <summary>
+		/// Gets or sets a value indicating whether ownership is required for property synchronization.
+		/// </summary>
+		/// <value>
+		/// Default is <c>true</c>, meaning only the owner can modify the synchronized variable.
+		/// </value>
+		public bool RequiresOwnership { get; set; } = true;
+
+		/// <summary>
+		/// Gets or sets a value indicating whether equality checks should be performed before synchronizing the value.
+		/// </summary>
+		/// <value>
+		/// Default is <c>true</c>, meaning the value is synchronized only if it has changed.
+		/// </value>
+		public bool CheckEquality { get; set; } = true;
+
+		/// <summary>
+		/// Gets or sets a value indicating whether the field should be hidden in the Unity Inspector.
+		/// </summary>
+		/// <value>
+		/// Default is <c>true</c>, meaning the field will not be visible in the Unity Inspector.
+		/// </value>
+		public bool HideInInspector { get; set; } = true;
+
+		public NetworkVariable(byte id = 0) { }
 	}
 }
