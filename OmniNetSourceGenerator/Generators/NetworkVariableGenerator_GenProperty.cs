@@ -19,11 +19,11 @@ namespace OmniNetSourceGenerator
 		{
 			try
 			{
-				if (context.SyntaxReceiver is NetworkVariableFieldSyntaxReceiver syntaxReceiver)
+				if (context.SyntaxReceiver is NetworkVariableFieldSyntaxReceiver receiver)
 				{
-					if (syntaxReceiver.fields.Any())
+					if (receiver.fields.Any())
 					{
-						IEnumerable<ClassStructure> classes = syntaxReceiver.fields.GroupMembersByParentClass();
+						var classes = receiver.fields.GroupByDeclaringClass();
 						foreach (ClassStructure @class in classes)
 						{
 							StringBuilder sb = new StringBuilder();
@@ -33,22 +33,22 @@ namespace OmniNetSourceGenerator
 							sb.AppendLine();
 
 							ClassDeclarationSyntax parentClass = @class.ParentClass.Clear(out var fromClass);
-							foreach (UsingDirectiveSyntax usingSyntax in fromClass.SyntaxTree.GetRoot().GetDescendantsOfType<UsingDirectiveSyntax>())
+							foreach (var usingSyntax in fromClass.SyntaxTree.GetRoot().GetDescendantsOfType<UsingDirectiveSyntax>())
 								sb.AppendLine(usingSyntax.ToString());
 
 							if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 							{
-								var semanticModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
-								bool isNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "NetworkBehaviour");
-								bool isClientBehaviour = fromClass.InheritsFrom(semanticModel, "ClientBehaviour");
-								bool isServerBehaviour = fromClass.InheritsFrom(semanticModel, "ServerBehaviour");
+								var classModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+								bool isNetworkBehaviour = fromClass.InheritsFromClass(classModel, "NetworkBehaviour");
+								bool isClientBehaviour = fromClass.InheritsFromClass(classModel, "ClientBehaviour");
+								bool isServerBehaviour = fromClass.InheritsFromClass(classModel, "ServerBehaviour");
 
 								// Note: DualBehaviour is not supported.
-								bool isDualBehaviour = fromClass.InheritsFrom(semanticModel, "DualBehaviour");
+								bool isDualBehaviour = fromClass.InheritsFromClass(classModel, "DualBehaviour");
 								if (GenHelper.ReportUnsupportedDualBehaviourUsage(context, isDualBehaviour))
 									continue;
 
-								if (isNetworkBehaviour || (isClientBehaviour || isServerBehaviour))
+								if (isNetworkBehaviour || isClientBehaviour || isServerBehaviour)
 								{
 									string baseClassName = isNetworkBehaviour ? "NetworkBehaviour" : (isClientBehaviour ? "ClientBehaviour" : isServerBehaviour ? "ServerBehaviour" : null);
 									NamespaceDeclarationSyntax currentNamespace = fromClass.GetNamespace(out bool hasNamespace);
@@ -76,67 +76,63 @@ namespace OmniNetSourceGenerator
 
 									foreach (FieldDeclarationSyntax field in @class.Members.Cast<FieldDeclarationSyntax>())
 									{
-										byte id = 0;
-										TypeSyntax declarationType = field.Declaration.Type;
-										IEnumerable<AttributeSyntax> attributes = field.GetAttributes("NetworkVariable");
-										if (attributes.Any())
+										byte currentId = 0;
+										var attribute = field.GetAttribute("NetworkVariable");
+										if (attribute != null)
 										{
-											foreach (var attributeSyntax in attributes)
+											var idExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("id", ArgumentIndex.First);
+											if (idExpression != null)
 											{
-												var arguments = attributeSyntax.ArgumentList.Arguments;
-												var idTypeExpression = GenHelper.GetArgumentExpression<LiteralExpressionSyntax>("id", 0, arguments);
-												if (idTypeExpression != null)
+												if (byte.TryParse(idExpression.Token.ValueText, out byte idValue))
 												{
-													if (byte.TryParse(idTypeExpression.Token.ValueText, out byte idValue))
-													{
-														id = idValue;
-													}
+													currentId = idValue;
 												}
 											}
 										}
 
-										if (id <= 0)
+										if (currentId <= 0)
 										{
-											int baseDepth = fromClass.GetBaseDepth(semanticModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour");
+											int baseDepth = fromClass.GetBaseDepth(classModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour");
 											if (baseDepth != 0)
 											{
 												unchecked
 												{
-													id = (byte)(255 - (255 / baseDepth));
+													currentId = (byte)(255 - (255 / baseDepth));
 												}
 											}
 										}
 
-										if (id <= 0)
+										if (currentId <= 0)
 										{
-											id++;
-											while (ids.Contains(id))
+											currentId++;
+											while (ids.Contains(currentId))
 											{
-												id++;
+												currentId++;
 											}
 										}
 
+										TypeSyntax declarationType = field.Declaration.Type;
 										foreach (VariableDeclaratorSyntax variableSyntax in field.Declaration.Variables)
 										{
 											string variableName = variableSyntax.Identifier.Text;
-											if (GenHelper.ReportInvalidFieldNaming(context, variableName))
+											if (GenHelper.ReportInvalidFieldNamingStartsWith(new Context(context), variableName))
 											{
 												continue;
 											}
 
 											// remove m_ prefix
 											variableName = variableName.Substring(2);
-											if (GenHelper.ReportInvalidFieldNamingConvention(context, variableName))
+											if (GenHelper.ReportInvalidFieldNamingIsUpper(new Context(context), variableName))
 											{
 												continue;
 											}
 
-											while (ids.Contains(id))
+											while (ids.Contains(currentId))
 											{
-												id++;
+												currentId++;
 											}
 
-											ids.Add(id);
+											ids.Add(currentId);
 											memberList.Add(
 												SyntaxFactory
 													.PropertyDeclaration(SyntaxFactory.ParseTypeName("NetworkVariableOptions"), $"{variableName}Options")
@@ -171,7 +167,7 @@ namespace OmniNetSourceGenerator
 																					SyntaxFactory.SeparatedList(
 																						new AttributeArgumentSyntax[]
 																						{
-																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"{id}"))
+																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"{currentId}"))
 																						}
 																					)
 																				)
@@ -204,22 +200,22 @@ namespace OmniNetSourceGenerator
 																	SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithBody(
 																		SyntaxFactory.Block(
 																			SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"!UnityEngine.Application.isPlaying"), SyntaxFactory.Block(SyntaxFactory.ParseStatement($"m_{variableName} = value;"), SyntaxFactory.ParseStatement("return;"))),
-																			SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"OnNetworkVariableDeepEquals(m_{variableName}, value, \"{variableName}\", {id})"), SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;"))),
+																			SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"OnNetworkVariableDeepEquals(m_{variableName}, value, \"{variableName}\", {currentId})"), SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;"))),
 																			SyntaxFactory.ParseStatement($"On{variableName}Changed(m_{variableName}, value, true);"),
 																			SyntaxFactory.ParseStatement($"OnBase{variableName}Changed(m_{variableName}, value, true);"),
 																			SyntaxFactory.ParseStatement($"m_{variableName} = value;"),
 																			(baseClassName == "NetworkBehaviour")
 																				? SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression("IsClient"),
 																						SyntaxFactory.Block(
-																							SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
+																							SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({variableName}, {currentId}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
 																						)
 																					).WithElse(
 																						SyntaxFactory.ElseClause(
-																							SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"))
+																							SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({variableName}, {currentId}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);"))
 																						)
 																					)
-																				: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
-																				: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({variableName}, {id}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
+																				: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({variableName}, {currentId}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
+																				: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({variableName}, {currentId}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
 																				: null
 																		)
 																	)
@@ -229,7 +225,7 @@ namespace OmniNetSourceGenerator
 													)
 											);
 
-											id++;
+											currentId++;
 										}
 									}
 
@@ -252,12 +248,12 @@ namespace OmniNetSourceGenerator
 								}
 								else
 								{
-									GenHelper.ReportInheritanceRequirement(context, fromClass.Identifier.Text);
+									GenHelper.ReportInheritanceRequirement(new Context(context), fromClass.Identifier.Text);
 								}
 							}
 							else
 							{
-								GenHelper.ReportPartialKeywordRequirement(context, fromClass.Identifier.Text);
+								GenHelper.ReportPartialKeywordRequirement(new Context(context), fromClass);
 							}
 						}
 					}

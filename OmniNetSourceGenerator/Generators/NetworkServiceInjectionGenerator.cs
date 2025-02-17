@@ -14,11 +14,11 @@ namespace OmniNetSourceGenerator
 	{
 		public void Execute(GeneratorExecutionContext context)
 		{
-			if (context.SyntaxReceiver is ServiceInjectionSyntaxReceiver syntaxReceiver)
+			if (context.SyntaxReceiver is ServiceInjectionSyntaxReceiver receiver)
 			{
-				if (syntaxReceiver.members.Any())
+				if (receiver.members.Any())
 				{
-					IEnumerable<ClassStructure> classes = syntaxReceiver.members.GroupMembersByParentClass();
+					var classes = receiver.members.GroupByDeclaringClass();
 					foreach (ClassStructure @class in classes)
 					{
 						StringBuilder sb = new StringBuilder();
@@ -27,14 +27,15 @@ namespace OmniNetSourceGenerator
 						sb.AppendLine();
 
 						ClassDeclarationSyntax parentClass = @class.ParentClass.Clear(out var fromClass);
-						foreach (UsingDirectiveSyntax usingSyntax in fromClass.SyntaxTree.GetRoot().GetDescendantsOfType<UsingDirectiveSyntax>())
+						foreach (var usingSyntax in fromClass.SyntaxTree.GetRoot().GetDescendantsOfType<UsingDirectiveSyntax>())
 							sb.AppendLine(usingSyntax.ToString());
 
 						if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 						{
-							var semanticModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
-							bool isNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "NetworkBehaviour");
-							bool isNonNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "DualBehaviour", "ClientBehaviour", "ServerBehaviour", "ServiceBehaviour");
+							var classModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+							bool isNetworkBehaviour = fromClass.InheritsFromClass(classModel, "NetworkBehaviour");
+							bool isNonNetworkBehaviour = fromClass.InheritsFromClass(classModel, "DualBehaviour", "ClientBehaviour", "ServerBehaviour", "ServiceBehaviour");
+
 							if (isNetworkBehaviour || isNonNetworkBehaviour)
 							{
 								NamespaceDeclarationSyntax currentNamespace = fromClass.GetNamespace(out bool hasNamespace);
@@ -44,17 +45,13 @@ namespace OmniNetSourceGenerator
 								foreach (MemberDeclarationSyntax member in @class.Members)
 								{
 									string serviceName = "";
-									IEnumerable<AttributeSyntax> attributes = member.GetAttributes("GlobalService", "LocalService");
-									if (attributes.Any())
+									var attributes = member.GetAttributes("GlobalService", "LocalService");
+									foreach (var attribute in attributes)
 									{
-										foreach (var attribute in attributes)
+										var nameExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("ServiceName", ArgumentIndex.First);
+										if (nameExpression != null)
 										{
-											var arguments = attribute.ArgumentList.Arguments;
-											var nameTypeExpression = GenHelper.GetArgumentExpression<LiteralExpressionSyntax>("ServiceName", 0, arguments);
-											if (nameTypeExpression != null)
-											{
-												serviceName = nameTypeExpression.Token.ValueText;
-											}
+											serviceName = nameExpression.Token.ValueText;
 										}
 									}
 
@@ -95,12 +92,12 @@ namespace OmniNetSourceGenerator
 							}
 							else
 							{
-								GenHelper.ReportInheritanceRequirement(context, fromClass.Identifier.Text);
+								GenHelper.ReportInheritanceRequirement(new Context(context), fromClass.Identifier.Text);
 							}
 						}
 						else
 						{
-							GenHelper.ReportPartialKeywordRequirement(context, fromClass.Identifier.Text);
+							GenHelper.ReportPartialKeywordRequirement(new Context(context), fromClass);
 						}
 					}
 				}

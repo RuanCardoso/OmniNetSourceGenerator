@@ -5,7 +5,6 @@ using SourceGenerator.Extensions;
 using SourceGenerator.Helpers;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 
@@ -21,11 +20,11 @@ namespace OmniNetSourceGenerator
 		{
 			try
 			{
-				if (context.SyntaxReceiver is NetworkVariableSyntaxReceiver syntaxReceiver)
+				if (context.SyntaxReceiver is NetworkVariableSyntaxReceiver receiver)
 				{
-					if (syntaxReceiver.members.Any())
+					if (receiver.members.Any())
 					{
-						IEnumerable<ClassStructure> classes = syntaxReceiver.members.GroupMembersByParentClass();
+						var classes = receiver.members.GroupByDeclaringClass();
 						foreach (ClassStructure @class in classes)
 						{
 							StringBuilder sb = new StringBuilder();
@@ -34,22 +33,22 @@ namespace OmniNetSourceGenerator
 							sb.AppendLine();
 
 							ClassDeclarationSyntax parentClass = @class.ParentClass.Clear(out var fromClass);
-							foreach (UsingDirectiveSyntax usingSyntax in fromClass.SyntaxTree.GetRoot().GetDescendantsOfType<UsingDirectiveSyntax>())
+							foreach (var usingSyntax in fromClass.SyntaxTree.GetRoot().GetDescendantsOfType<UsingDirectiveSyntax>())
 								sb.AppendLine(usingSyntax.ToString());
 
 							if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 							{
-								var semanticModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
-								bool isNetworkBehaviour = fromClass.InheritsFrom(semanticModel, "NetworkBehaviour");
-								bool isClientBehaviour = fromClass.InheritsFrom(semanticModel, "ClientBehaviour");
-								bool isServerBehaviour = fromClass.InheritsFrom(semanticModel, "ServerBehaviour");
+								var classModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+								bool isNetworkBehaviour = fromClass.InheritsFromClass(classModel, "NetworkBehaviour");
+								bool isClientBehaviour = fromClass.InheritsFromClass(classModel, "ClientBehaviour");
+								bool isServerBehaviour = fromClass.InheritsFromClass(classModel, "ServerBehaviour");
 
 								// Note: DualBehaviour is not supported.
-								bool isDualBehaviour = fromClass.InheritsFrom(semanticModel, "DualBehaviour");
+								bool isDualBehaviour = fromClass.InheritsFromClass(classModel, "DualBehaviour");
 								if (GenHelper.ReportUnsupportedDualBehaviourUsage(context, isDualBehaviour))
 									continue;
 
-								if (isNetworkBehaviour || (isClientBehaviour || isServerBehaviour))
+								if (isNetworkBehaviour || isClientBehaviour || isServerBehaviour)
 								{
 									string isServer = DetermineIsServerValue(isNetworkBehaviour, isClientBehaviour, isServerBehaviour, out string baseClassName);
 									NamespaceDeclarationSyntax currentNamespace = fromClass.GetNamespace(out bool hasNamespace);
@@ -61,50 +60,48 @@ namespace OmniNetSourceGenerator
 									List<StatementSyntax> onNotifyCollectionHandlers = new List<StatementSyntax>();
 									List<StatementSyntax> onNotifyInitialStateHandlers = new List<StatementSyntax>();
 
-									HashSet<byte> ids = new HashSet<byte>();
+									HashSet<byte> uniqueIds = new HashSet<byte>();
 									foreach (MemberDeclarationSyntax member in @class.Members)
 									{
-										byte id = 0;
+										byte currentId = 0;
 
 										TypeSyntax declarationType = member is FieldDeclarationSyntax field ? field.Declaration.Type : ((PropertyDeclarationSyntax)member).Type;
-										SemanticModel model = context.Compilation.GetSemanticModel(member.SyntaxTree);
+										SemanticModel memberModel = context.Compilation.GetSemanticModel(member.SyntaxTree);
 
-										bool isSerializable = IsSerializable(model.GetTypeInfo(declarationType).Type, out bool withPeer);
-										IEnumerable<AttributeSyntax> attributes = member.GetAttributes("NetworkVariable");
-										if (attributes.Any())
+										bool isSerializable = declarationType.InheritsFromInterface(memberModel, "IMessage");
+										bool isSerializableWithPeer = declarationType.InheritsFromInterface(memberModel, "IMessageWithPeer");
+
+										var attribute = member.GetAttribute("NetworkVariable");
+										if (attribute != null)
 										{
-											foreach (var attributeSyntax in attributes)
+											var idExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("id", ArgumentIndex.First);
+											if (idExpression != null)
 											{
-												var arguments = attributeSyntax.ArgumentList.Arguments;
-												var idTypeExpression = GenHelper.GetArgumentExpression<LiteralExpressionSyntax>("id", 0, arguments);
-												if (idTypeExpression != null)
+												if (byte.TryParse(idExpression.Token.ValueText, out byte idValue))
 												{
-													if (byte.TryParse(idTypeExpression.Token.ValueText, out byte idValue))
-													{
-														id = idValue;
-													}
+													currentId = idValue;
 												}
 											}
 										}
 
-										if (id <= 0)
+										if (currentId <= 0)
 										{
-											int baseDepth = fromClass.GetBaseDepth(semanticModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour");
+											int baseDepth = fromClass.GetBaseDepth(classModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour");
 											if (baseDepth != 0)
 											{
 												unchecked
 												{
-													id = (byte)(255 - (255 / baseDepth));
+													currentId = (byte)(255 - (255 / baseDepth));
 												}
 											}
 										}
 
-										if (id <= 0)
+										if (currentId <= 0)
 										{
-											id++;
-											while (ids.Contains(id))
+											currentId++;
+											while (uniqueIds.Contains(currentId))
 											{
-												id++;
+												currentId++;
 											}
 										}
 
@@ -112,17 +109,17 @@ namespace OmniNetSourceGenerator
 										if (member is PropertyDeclarationSyntax propSyntax)
 										{
 											string identifierName = propSyntax.Identifier.Text;
-											while (ids.Contains(id))
+											while (uniqueIds.Contains(currentId))
 											{
-												id++;
+												currentId++;
 											}
 
-											ids.Add(id);
-											sections.Add(CreateSection(id.ToString(), identifierName, typeString, isSerializable, withPeer, isServer));
+											uniqueIds.Add(currentId);
+											sections.Add(CreateSection(currentId.ToString(), identifierName, typeString, isSerializable, isSerializableWithPeer, isServer));
 
 											onChangedHandlers.Add(CreatePartialHandler(identifierName, typeString));
 											onChangedHandlers.Add(CreateVirtualHandler(identifierName, typeString));
-											onChangedHandlers.Add(CreateSyncMethod(identifierName, id.ToString(), baseClassName));
+											onChangedHandlers.Add(CreateSyncMethod(identifierName, currentId.ToString(), baseClassName));
 
 											if (typeString.StartsWith("ObservableDictionary") || typeString.StartsWith("ObservableList"))
 											{
@@ -132,7 +129,7 @@ namespace OmniNetSourceGenerator
 												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnUpdate += (isSend) => {{if(isSend) Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);}};"));
 											}
 
-											onNotifyInitialStateHandlers.Add(CreateSyncInitialState(identifierName, id.ToString(), baseClassName));
+											onNotifyInitialStateHandlers.Add(CreateSyncInitialState(identifierName, currentId.ToString(), baseClassName));
 										}
 										else if (member is FieldDeclarationSyntax fieldSyntax)
 										{
@@ -140,29 +137,29 @@ namespace OmniNetSourceGenerator
 											{
 												// Check if the field name follows the naming convention
 												string fieldName = variable.Identifier.Text;
-												if (GenHelper.ReportInvalidFieldNaming(context, fieldName))
+												if (GenHelper.ReportInvalidFieldNamingStartsWith(new Context(context), fieldName))
 												{
 													continue;
 												}
 
 												// Remove m_ prefix
 												string variableName = fieldName.Substring(2);
-												if (GenHelper.ReportInvalidFieldNamingConvention(context, variableName))
+												if (GenHelper.ReportInvalidFieldNamingIsUpper(new Context(context), variableName))
 												{
 													continue;
 												}
 
-												while (ids.Contains(id))
+												while (uniqueIds.Contains(currentId))
 												{
-													id++;
+													currentId++;
 												}
 
-												ids.Add(id);
-												sections.Add(CreateSection(id.ToString(), variableName, typeString, isSerializable, withPeer, isServer));
+												uniqueIds.Add(currentId);
+												sections.Add(CreateSection(currentId.ToString(), variableName, typeString, isSerializable, isSerializableWithPeer, isServer));
 
 												onChangedHandlers.Add(CreatePartialHandler(variableName, typeString));
 												onChangedHandlers.Add(CreateVirtualHandler(variableName, typeString));
-												onChangedHandlers.Add(CreateSyncMethod(variableName, id.ToString(), baseClassName));
+												onChangedHandlers.Add(CreateSyncMethod(variableName, currentId.ToString(), baseClassName));
 
 												if (typeString.StartsWith("ObservableDictionary") || typeString.StartsWith("ObservableList"))
 												{
@@ -172,7 +169,7 @@ namespace OmniNetSourceGenerator
 													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnUpdate += (isSend) => {{if(isSend) Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);}};"));
 												}
 
-												onNotifyInitialStateHandlers.Add(CreateSyncInitialState(variableName, id.ToString(), baseClassName));
+												onNotifyInitialStateHandlers.Add(CreateSyncInitialState(variableName, currentId.ToString(), baseClassName));
 											}
 										}
 									}
@@ -280,12 +277,12 @@ namespace OmniNetSourceGenerator
 								}
 								else
 								{
-									GenHelper.ReportInheritanceRequirement(context, fromClass.Identifier.Text);
+									GenHelper.ReportInheritanceRequirement(new Context(context), fromClass.Identifier.Text);
 								}
 							}
 							else
 							{
-								GenHelper.ReportPartialKeywordRequirement(context, fromClass.Identifier.Text);
+								GenHelper.ReportPartialKeywordRequirement(new Context(context), fromClass);
 							}
 						}
 					}
@@ -333,19 +330,6 @@ namespace OmniNetSourceGenerator
 			throw new NotImplementedException("Unable to determine 'isServer' value");
 		}
 
-		private bool IsSerializable(ITypeSymbol typeSymbol, out bool withPeer)
-		{
-			withPeer = false;
-			if (typeSymbol != null)
-			{
-				var interfaces = typeSymbol.Interfaces;
-				withPeer = interfaces.Any(x => x.Name == "IMessageWithPeer");
-				return interfaces.Any(x => x.Name == "IMessageWithPeer" || x.Name == "IMessage");
-			}
-
-			return false;
-		}
-
 		private MethodDeclarationSyntax CreateSyncMethod(string propertyName, string propertyId, string baseClassName)
 		{
 			return SyntaxFactory
@@ -358,6 +342,7 @@ namespace OmniNetSourceGenerator
 							{
 								SyntaxFactory.Parameter(SyntaxFactory.Identifier($"options")).WithType(SyntaxFactory.ParseTypeName("NetworkVariableOptions"))
 							}
+
 						)
 					)
 				)
@@ -377,7 +362,7 @@ namespace OmniNetSourceGenerator
 								)
 							: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);")
 							: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({propertyName}, {propertyId}, options);")
-							: SyntaxFactory.EmptyStatement()
+							: GenHelper.EmptyStatement()
 					)
 				);
 		}
@@ -391,7 +376,7 @@ namespace OmniNetSourceGenerator
 						 SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);"))
 					 )
 				 : baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);")
-				 : SyntaxFactory.EmptyStatement();
+				 : GenHelper.EmptyStatement();
 		}
 
 		private MethodDeclarationSyntax CreatePartialHandler(string propertyName, string type)
@@ -460,7 +445,7 @@ namespace OmniNetSourceGenerator
 								SyntaxFactory.IfStatement(SyntaxFactory.ParseExpression($"!OnNetworkVariableDeepEquals(m_{propertyName}, nextValue, propertyName, {caseExpression})"),
 								SyntaxFactory.Block(SyntaxFactory.ParseStatement($"On{propertyName}Changed(m_{propertyName}, nextValue, false);"),
 								SyntaxFactory.ParseStatement($"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"),
-								(propertyType.StartsWith("ObservableDictionary") || propertyType.StartsWith("ObservableList")) ? SyntaxFactory.ParseStatement("nextValue.OnUpdate?.Invoke(false);") : SyntaxFactory.EmptyStatement(),
+								(propertyType.StartsWith("ObservableDictionary") || propertyType.StartsWith("ObservableList")) ? SyntaxFactory.ParseStatement("nextValue.OnUpdate?.Invoke(false);") : GenHelper.EmptyStatement(),
 								SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;")),
 								SyntaxFactory.ElseClause(SyntaxFactory.Block(SyntaxFactory.ParseStatement("return;")))),
 								SyntaxFactory.BreakStatement()
