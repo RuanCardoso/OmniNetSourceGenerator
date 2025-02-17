@@ -10,7 +10,7 @@ namespace SourceGenerator.Helpers
 		public static readonly DiagnosticDescriptor InvalidFieldNamingConventionIsUpper = new DiagnosticDescriptor(
 			id: "OMNI003",
 			title: "Invalid Field Name Capitalization",
-			messageFormat: "Field '{0}' with 'm_' prefix must follow PascalCase convention (e.g., 'm_PlayerHealth')",
+			messageFormat: "The Field '{0}' with 'm_' prefix must follow PascalCase convention (e.g., 'm_PlayerHealth')",
 			category: "Naming",
 			defaultSeverity: DiagnosticSeverity.Error,
 			isEnabledByDefault: true,
@@ -20,7 +20,7 @@ namespace SourceGenerator.Helpers
 		public static readonly DiagnosticDescriptor InvalidFieldNamingConventionStartsWith = new DiagnosticDescriptor(
 			id: "OMNI004",
 			title: "Missing Required Field Prefix",
-			messageFormat: "Field '{0}' must start with 'm_' prefix and follow PascalCase convention",
+			messageFormat: "The Field '{0}' must start with 'm_' prefix and follow PascalCase convention",
 			category: "Naming",
 			defaultSeverity: DiagnosticSeverity.Error,
 			isEnabledByDefault: true,
@@ -32,7 +32,7 @@ namespace SourceGenerator.Helpers
 		public static readonly DiagnosticDescriptor PartialKeywordMissing = new DiagnosticDescriptor(
 			id: "OMNI002",
 			title: "Missing 'partial' Keyword in Source Generator Class",
-			messageFormat: "Class '{0}' must be declared with the 'partial' keyword to support source generation functionality",
+			messageFormat: "The Class '{0}' must be declared with the 'partial' keyword to support source generation functionality",
 			category: "Source Generation",
 			defaultSeverity: DiagnosticSeverity.Error,
 			isEnabledByDefault: true,
@@ -43,7 +43,7 @@ namespace SourceGenerator.Helpers
 		public static readonly DiagnosticDescriptor InheritanceConstraintViolation = new DiagnosticDescriptor(
 			id: "OMNI001",
 			title: "Missing Network Inheritance",
-			messageFormat: "Class '{0}' must inherit from a network class (NetworkBehaviour, ServerBehaviour, or ClientBehaviour)",
+			messageFormat: "The Class '{0}' must inherit from a network class (NetworkBehaviour, ServerBehaviour, or ClientBehaviour)",
 			category: "Networking",
 			defaultSeverity: DiagnosticSeverity.Error,
 			isEnabledByDefault: true,
