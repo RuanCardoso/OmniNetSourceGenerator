@@ -9,6 +9,64 @@ namespace SourceGenerator.Extensions
 {
 	public static class GenExtensions
 	{
+		public static bool HasAttributeOfType(this ITypeSymbol symbol, string baseAttributeName)
+		{
+			return symbol.GetAttributes().Any(x =>
+				x.AttributeClass?.InheritsFromClass(baseAttributeName) == true);
+		}
+
+		public static bool HasAttributeOfType(this MemberDeclarationSyntax member,
+			string baseAttributeName,
+			SemanticModel semanticModel)
+		{
+			return member.AttributeLists.Any(x => x.Attributes.Any(y =>
+			{
+				var typeInfo = semanticModel.GetTypeInfo(y);
+				return typeInfo.Type?.InheritsFromClass(baseAttributeName) == true;
+			}));
+		}
+
+		public static bool HasAttributeOfType(this MemberDeclarationSyntax member,
+			SemanticModel semanticModel,
+			params string[] baseAttributeNames)
+		{
+			return baseAttributeNames.Any(x => member.HasAttributeOfType(x, semanticModel));
+		}
+
+		public static IEnumerable<AttributeSyntax> GetAttributesOfType(
+			this MemberDeclarationSyntax member,
+			string baseAttributeName,
+			SemanticModel semanticModel)
+		{
+			return member.AttributeLists.SelectMany(x => x.Attributes.Where(y =>
+			{
+				var typeInfo = semanticModel.GetTypeInfo(y);
+				return typeInfo.Type?.InheritsFromClass(baseAttributeName) == true;
+			}));
+		}
+
+		public static AttributeSyntax GetAttributeOfType(
+			this MemberDeclarationSyntax member,
+			string baseAttributeName,
+			SemanticModel semanticModel)
+		{
+			return GetAttributesOfType(member, baseAttributeName, semanticModel).FirstOrDefault();
+		}
+
+		public static IEnumerable<AttributeSyntax> GetAttributesOfType(
+			this MemberDeclarationSyntax member,
+			SemanticModel semanticModel,
+			params string[] baseAttributeNames)
+		{
+			return baseAttributeNames.SelectMany(x =>
+				member.GetAttributesOfType(x, semanticModel));
+		}
+
+		public static bool HasAttribute(this ITypeSymbol symbol, string attributeName)
+		{
+			return symbol.GetAttributes().Any(x => x.AttributeClass?.Name == attributeName || x.AttributeClass?.ToDisplayString() == attributeName);
+		}
+
 		public static bool HasAttribute(this MemberDeclarationSyntax member, string attributeName)
 		{
 			return member.AttributeLists.Any(x => x.Attributes.Any(y => y.Name.ToString() == attributeName));
@@ -46,6 +104,14 @@ namespace SourceGenerator.Extensions
 
 		public static bool HasModifier(this MemberDeclarationSyntax member, SyntaxKind modifier)
 		{
+			if (modifier == SyntaxKind.PrivateKeyword)
+			{
+				if (member.Modifiers != null && member.Modifiers.Count == 0)
+				{
+					return true;
+				}
+			}
+
 			return member.Modifiers.Any(modifier);
 		}
 
@@ -96,14 +162,9 @@ namespace SourceGenerator.Extensions
 			return depth;
 		}
 
-		public static bool InheritsFromClass(this ClassDeclarationSyntax classDeclaration, SemanticModel semanticModel, string baseName)
+		public static bool InheritsFromClass(this ITypeSymbol symbol, string baseName)
 		{
-			if (!(semanticModel.GetDeclaredSymbol(classDeclaration) is INamedTypeSymbol classSymbol))
-			{
-				return false;
-			}
-
-			INamedTypeSymbol currentBase = classSymbol.BaseType;
+			INamedTypeSymbol currentBase = symbol.BaseType;
 			while (currentBase != null)
 			{
 				if (currentBase.Name == baseName || currentBase.ToDisplayString() == baseName)
@@ -115,13 +176,28 @@ namespace SourceGenerator.Extensions
 			return false;
 		}
 
+		public static bool InheritsFromClass(this ClassDeclarationSyntax @class, SemanticModel semanticModel, string baseName)
+		{
+			if (!(semanticModel.GetDeclaredSymbol(@class) is INamedTypeSymbol classNamedSymbol))
+			{
+				return false;
+			}
+
+			return classNamedSymbol.InheritsFromClass(baseName);
+		}
+
+		public static bool InheritsFromInterface(this ITypeSymbol symbol, string interfaceName)
+		{
+			if (symbol == null)
+				return false;
+
+			return symbol.AllInterfaces.Any(x => x.Name == interfaceName || x.ToDisplayString() == interfaceName);
+		}
+
 		public static bool InheritsFromInterface(this TypeSyntax type, SemanticModel semanticModel, string interfaceName)
 		{
 			ITypeSymbol typeSymbol = semanticModel.GetTypeInfo(type).Type;
-			if (typeSymbol == null)
-				return false;
-
-			return typeSymbol.AllInterfaces.Any(x => x.Name == interfaceName || x.ToDisplayString() == interfaceName);
+			return typeSymbol.InheritsFromInterface(interfaceName);
 		}
 
 		public static bool InheritsFromInterface(this TypeSyntax type, SemanticModel semanticModel, params string[] interfaceNames)
