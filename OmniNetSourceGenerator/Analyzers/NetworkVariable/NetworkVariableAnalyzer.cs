@@ -159,6 +159,15 @@ namespace OmniNetSourceGenerator.Analyzers
                         "\n- Use primitive types or serializable structures"
         );
 
+        public static readonly DiagnosticDescriptor StaticNetworkVariable = new DiagnosticDescriptor(
+            id: "OMNI030",
+            title: "Network Variable Should Not Be Static",
+            messageFormat: "The Network Variable '{0}' should not be static as it is automatically synchronized across instances",
+            category: "Design",
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true
+        );
+
         private readonly DiagnosticDescriptor[] descriptors = new DiagnosticDescriptor[] {
             GenHelper.InvalidFieldNamingConventionIsUpper,
             GenHelper.InvalidFieldNamingConventionStartsWith,
@@ -172,7 +181,8 @@ namespace OmniNetSourceGenerator.Analyzers
             ClientAuthorityWithoutOwnershipWarning,
             CollectionTypeWarning,
             BooleanCountWarning,
-            MonoBehaviourSerializationWarning
+            MonoBehaviourSerializationWarning,
+            StaticNetworkVariable
         };
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(descriptors);
@@ -232,13 +242,25 @@ namespace OmniNetSourceGenerator.Analyzers
                     Context cContext = new Context(context);
                     if (field.Parent is ClassDeclarationSyntax @class)
                     {
-                        GenHelper.ReportPartialKeywordRequirement(cContext, @class, @class.GetLocation());
+                        GenHelper.ReportPartialKeywordRequirement(cContext, @class, field.GetLocation());
                         if (!field.HasModifier(SyntaxKind.PrivateKeyword))
                         {
                             foreach (var variable in field.Declaration.Variables)
                             {
                                 cContext.ReportDiagnostic(
                                     NetworkVariableFieldShouldBePrivate,
+                                    variable.GetLocation(),
+                                    variable.Identifier.Text
+                                );
+                            }
+                        }
+
+                        if (field.HasModifier(SyntaxKind.StaticKeyword))
+                        {
+                            foreach (var variable in field.Declaration.Variables)
+                            {
+                                cContext.ReportDiagnostic(
+                                    StaticNetworkVariable,
                                     variable.GetLocation(),
                                     variable.Identifier.Text
                                 );

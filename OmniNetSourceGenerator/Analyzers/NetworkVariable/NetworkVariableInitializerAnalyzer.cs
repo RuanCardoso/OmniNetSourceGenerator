@@ -31,7 +31,7 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private readonly DiagnosticDescriptor[] descriptors = new DiagnosticDescriptor[]
         {
-        UninitializedReferenceTypeWarning
+            UninitializedReferenceTypeWarning
         };
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(descriptors);
