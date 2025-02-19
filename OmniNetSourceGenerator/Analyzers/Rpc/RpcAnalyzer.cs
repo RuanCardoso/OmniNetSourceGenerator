@@ -13,7 +13,7 @@ namespace OmniNetSourceGenerator.Analyzers
     public class RpcAnalyzer : DiagnosticAnalyzer
     {
         public static readonly DiagnosticDescriptor RpcMethodShouldBePrivate = new DiagnosticDescriptor(
-            id: "OMNI030",
+            id: "OMNI031",
             title: "RPC Method Should Be Private",
             messageFormat: "The RPC method '{0}' should be private by design.",
             category: "Design",
@@ -21,10 +21,20 @@ namespace OmniNetSourceGenerator.Analyzers
             isEnabledByDefault: true
         );
 
+        public static readonly DiagnosticDescriptor StaticRpcMethod = new DiagnosticDescriptor(
+            id: "OMNI032",
+            title: "RPC Method Should Not Be Static",
+            messageFormat: "The RPC method '{0}' should not be static.",
+            category: "Design",
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true
+        );
+
         private readonly DiagnosticDescriptor[] descriptors = new DiagnosticDescriptor[]
         {
             RpcMethodShouldBePrivate,
             GenHelper.InheritanceConstraintViolation,
+            StaticRpcMethod,
             // GenHelper.PartialKeywordMissing // Coming soon, Reflection is the current solution, not source generation
         };
 
@@ -41,9 +51,18 @@ namespace OmniNetSourceGenerator.Analyzers
         {
             if (context.Node is MethodDeclarationSyntax method)
             {
-                if (method.HasAttribute("Server"))
+                if (method.HasAttribute("Server") || method.HasAttribute("Client"))
                 {
                     Context cContext = new Context(context);
+                    if (method.HasModifier(SyntaxKind.StaticKeyword))
+                    {
+                        cContext.ReportDiagnostic(
+                            StaticRpcMethod,
+                            method.Identifier.GetLocation(),
+                            method.Identifier.Text
+                        );
+                    }
+
                     if (method.Parent is ClassDeclarationSyntax @class)
                     {
                         // GenHelper.ReportPartialKeywordRequirement(cContext, @class, @class.GetLocation()); // Coming soon, Reflection is the current solution, not source generation
