@@ -118,7 +118,6 @@ namespace OmniNetSourceGenerator.Analyzers
                 }
                 else
                 {
-                    // suporte para constantes
                     var idExpressionConst = attribute.GetArgumentExpression<IdentifierNameSyntax>("id", ArgumentIndex.First);
                     var symbol = semanticModel.GetSymbolInfo(idExpressionConst).Symbol;
 
