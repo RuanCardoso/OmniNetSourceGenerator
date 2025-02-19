@@ -1,26 +1,23 @@
-﻿using System;
-using System.ComponentModel.Design;
-using System.Numerics;
-using Omni.Core;
-using OmniNet;
+﻿using Omni.Core;
 
 #nullable disable
 
-public partial class Program
+public partial class Program : NetworkBehaviour
 {
 	public static void Main(string[] args) { }
 }
 
 namespace OmniNet
 {
-	public class PlayerBaseRoot : Program
+	public partial class PlayerBaseRoot : Program
 	{
-        const byte idRpc = 1;
+		[Client(1)]
+		void RpcMethod() { }
 
-		[Server(idRpc)]
-		public void RpcMethod() { }
-
-		[Client(idRpc)]
-		public void RpcMethod2() { }
+		[Server(2)]
+		private void RpcMethod2(DataBuffer buffer, NetworkPeer peer)
+		{
+            
+		}
 	}
 }

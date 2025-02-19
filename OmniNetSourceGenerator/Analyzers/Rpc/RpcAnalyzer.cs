@@ -35,7 +35,7 @@ namespace OmniNetSourceGenerator.Analyzers
             RpcMethodShouldBePrivate,
             GenHelper.InheritanceConstraintViolation,
             StaticRpcMethod,
-            // GenHelper.PartialKeywordMissing // Coming soon, Reflection is the current solution, not source generation
+            GenHelper.PartialKeywordMissing
         };
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(descriptors);
@@ -65,7 +65,7 @@ namespace OmniNetSourceGenerator.Analyzers
 
                     if (method.Parent is ClassDeclarationSyntax @class)
                     {
-                        // GenHelper.ReportPartialKeywordRequirement(cContext, @class, @class.GetLocation()); // Coming soon, Reflection is the current solution, not source generation
+                        GenHelper.ReportPartialKeywordRequirement(cContext, @class, method.Identifier.GetLocation());
                         if (!method.HasModifier(SyntaxKind.PrivateKeyword))
                         {
                             cContext.ReportDiagnostic(
