@@ -65,7 +65,7 @@ namespace OmniNetSourceGenerator.Analyzers
                     if (!field.HasAttribute("NetworkVariable"))
                         continue;
 
-                    if (!GetNetworkVariableId(field, out byte currentId))
+                    if (!GetNetworkVariableId(field, context.SyntaxNodeAnalysisContext.Value.SemanticModel, out byte currentId))
                         continue;
 
                     foreach (var variable in field.Declaration.Variables)
@@ -83,7 +83,7 @@ namespace OmniNetSourceGenerator.Analyzers
             }
         }
 
-        private bool GetNetworkVariableId(FieldDeclarationSyntax member, out byte id)
+        private bool GetNetworkVariableId(FieldDeclarationSyntax member, SemanticModel semanticModel, out byte id)
         {
             AttributeSyntax attribute = member.GetAttribute("NetworkVariable");
             if (attribute != null)
@@ -94,6 +94,19 @@ namespace OmniNetSourceGenerator.Analyzers
                     if (byte.TryParse(idExpression.Token.ValueText, out byte idValue))
                     {
                         id = idValue;
+                        return true;
+                    }
+                }
+                else
+                {
+                    var idExpressionConst = attribute.GetArgumentExpression<IdentifierNameSyntax>("id", ArgumentIndex.First);
+                    var symbol = semanticModel.GetSymbolInfo(idExpressionConst).Symbol;
+
+                    if (symbol is IFieldSymbol fieldSymbol &&
+                        fieldSymbol.HasConstantValue &&
+                        fieldSymbol.ConstantValue is byte constantValue)
+                    {
+                        id = constantValue;
                         return true;
                     }
                 }
