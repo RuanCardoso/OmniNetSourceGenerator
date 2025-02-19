@@ -100,14 +100,16 @@ namespace OmniNetSourceGenerator.Analyzers
                 else
                 {
                     var idExpressionConst = attribute.GetArgumentExpression<IdentifierNameSyntax>("id", ArgumentIndex.First);
-                    var symbol = semanticModel.GetSymbolInfo(idExpressionConst).Symbol;
-
-                    if (symbol is IFieldSymbol fieldSymbol &&
-                        fieldSymbol.HasConstantValue &&
-                        fieldSymbol.ConstantValue is byte constantValue)
+                    if (idExpressionConst != null)
                     {
-                        id = constantValue;
-                        return true;
+                        var symbol = semanticModel.GetSymbolInfo(idExpressionConst).Symbol;
+                        if (symbol is IFieldSymbol fieldSymbol &&
+                            fieldSymbol.HasConstantValue &&
+                            fieldSymbol.ConstantValue is byte constantValue)
+                        {
+                            id = constantValue;
+                            return true;
+                        }
                     }
                 }
             }
