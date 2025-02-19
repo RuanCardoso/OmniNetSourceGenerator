@@ -13,7 +13,7 @@ namespace OmniNetSourceGenerator.Analyzers
     public class RpcDuplicateIdAnalyzer : DiagnosticAnalyzer
     {
         public static readonly DiagnosticDescriptor DuplicateRpcId = new DiagnosticDescriptor(
-            id: "OMNI031",
+            id: "OMNI041",
             title: "Duplicate RPC ID",
             messageFormat: "The {0} RPC method with Id {1} is already defined in {2}",
             category: "Design",
