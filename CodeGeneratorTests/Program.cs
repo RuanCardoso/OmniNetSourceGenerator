@@ -1,47 +1,26 @@
-﻿using Omni.Core;
+﻿using System;
+using System.ComponentModel.Design;
+using System.Numerics;
+using Omni.Core;
 using OmniNet;
-using System;
-using System.Collections.Generic;
 
-public partial class Program : Player
+#nullable disable
+
+public partial class Program
 {
 	public static void Main(string[] args) { }
 }
 
 namespace OmniNet
 {
-	public partial class PlayerBaseRoot : Program
+	public class PlayerBaseRoot : Program
 	{
-		[NetworkVariable(Id = 10)]
-		private float m_Health = 100f;
-	}
+        const byte idRpc = 1;
 
-	public partial class PlayerBase : PlayerBaseRoot
-	{
-		[NetworkVariable(Id = 2, CheckEquality = true)]
-		private float m_Mana = 100f;
+		[Server(idRpc)]
+		public void RpcMethod() { }
 
-		[NetworkVariable]
-		private float m_Mana2, m_Mana3 = 100f;
-
-		[NetworkVariable]
-		private Dictionary<int, string> m_Dictionary = [];
-	}
-
-	public partial class Player : ServerBehaviour
-	{
-		[NetworkVariable(47)]
-		private float m_AbsSpeed = 10f;
-
-		[Server(10)]
-		void OnMoveRpc()
-		{
-			
-		}
-	}
-
-	public class MonoBehaviour
-	{
-
+		[Client(idRpc)]
+		public void RpcMethod2() { }
 	}
 }

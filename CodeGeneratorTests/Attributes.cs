@@ -62,15 +62,18 @@ namespace Omni.Core
 		}
 	}
 
-	public class Server : Attribute
+	public class EventRpc : Attribute
 	{
 		internal byte Id { get; }
+	}
+
+	public class Server : EventRpc
+	{
 		public Server(byte id) { }
 	}
 
-	public class Client : Attribute
+	public class Client : EventRpc
 	{
-		internal byte Id { get; }
 		public Client(byte id) { }
 	}
 

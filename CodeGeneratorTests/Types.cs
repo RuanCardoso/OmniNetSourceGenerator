@@ -21,6 +21,14 @@ namespace UnityEngine
 	}
 }
 
+public class ObservableList<T> : List<T>
+{
+	public event Action<int, int> OnItemAdded;
+	public event Action<int, int> OnItemRemoved;
+	public event Action<int, int> OnItemUpdated;
+	public Action<bool> OnUpdate; // true to send to players
+}
+
 public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue> where TKey : notnull
 {
 	public event Action<int, int> OnItemAdded;
@@ -29,7 +37,8 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue> where
 	public Action<bool> OnUpdate; // true to send to players
 }
 
-public class NetVarBehaviour {
+public class NetVarBehaviour
+{
 
 	protected virtual void SyncNetworkState(NetworkPeer peer)
 	{

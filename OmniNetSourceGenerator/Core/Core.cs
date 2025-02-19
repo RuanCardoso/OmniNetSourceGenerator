@@ -42,6 +42,9 @@ public readonly struct Context
     private readonly GeneratorExecutionContext? _context;
     private readonly SyntaxNodeAnalysisContext? _syntaxContext;
 
+    public GeneratorExecutionContext? GeneratorExecutionContext => _context;
+    public SyntaxNodeAnalysisContext? SyntaxNodeAnalysisContext => _syntaxContext;
+
     public Context(GeneratorExecutionContext context)
     {
         _context = context;
