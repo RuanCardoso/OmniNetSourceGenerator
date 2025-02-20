@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -147,15 +148,17 @@ namespace SourceGenerator.Helpers
 		}
 	}
 
-#if DEBUG
 	internal static class Logger
 	{
 		private static readonly List<string> _logs = new List<string>();
+
+		[Conditional("DEBUG")]
 		public static void Print(string msg) => _logs.Add("//\t" + msg);
+
+		[Conditional("DEBUG")]
 		public static void Flush(GeneratorExecutionContext context)
 		{
 			context.AddSource($"logs.g.cs", SourceText.From(string.Join("\n", _logs), Encoding.UTF8));
 		}
 	}
-#endif
 }
