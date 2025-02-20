@@ -24,6 +24,9 @@ namespace OmniNetSourceGenerator
                         var classes = receiver.methods.GroupByDeclaringClass();
                         foreach (ClassStructure @class in classes)
                         {
+                            if (@class.ParentClass.HasAttribute("SkipCodeGen"))
+                                continue;
+
                             StringBuilder sb = new StringBuilder();
                             sb.AppendLine("#nullable disable");
                             sb.AppendLine("#pragma warning disable");
@@ -116,7 +119,7 @@ namespace OmniNetSourceGenerator
                                     sb.Append(currentNamespace.NormalizeWhitespace().ToString());
                                 }
 
-                                context.AddSource($"{parentClass.Identifier.Text}_rpc_usage_generated_code.cs", sb.ToString());
+                                context.AddSource($"{parentClass.Identifier.Text}_rpc_usage_generated_code_{parentClass.GetHashCode()}.cs", sb.ToString());
                             }
                         }
                     }
@@ -154,7 +157,7 @@ namespace OmniNetSourceGenerator
         {
             if (syntaxNode is MethodDeclarationSyntax methodSyntax)
             {
-                if (methodSyntax.HasAttribute("Client") || methodSyntax.HasAttribute("Server"))
+                if (methodSyntax.HasAttribute("Client", "Server"))
                 {
                     methods.Add(methodSyntax);
                 }

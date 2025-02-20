@@ -85,6 +85,11 @@ namespace Omni.Core
 		public Client(byte id) { }
 	}
 
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
+	public class SkipCodeGen : Attribute
+	{
+	}
+
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 	public class NetworkVariable : Attribute
 	{

@@ -27,6 +27,9 @@ namespace OmniNetSourceGenerator
 						var classes = receiver.members.GroupByDeclaringClass();
 						foreach (ClassStructure @class in classes)
 						{
+							if (@class.ParentClass.HasAttribute("SkipCodeGen"))
+								continue;
+
 							StringBuilder sb = new StringBuilder();
 							sb.AppendLine("#nullable disable");
 							sb.AppendLine("#pragma warning disable");
@@ -273,7 +276,7 @@ namespace OmniNetSourceGenerator
 										sb.Append(currentNamespace.NormalizeWhitespace().ToString());
 									}
 
-									context.AddSource($"{parentClass.Identifier.Text}_netvar_generated_code.cs", sb.ToString());
+									context.AddSource($"{parentClass.Identifier.Text}_netvar_generated_code_{parentClass.GetHashCode()}.cs", sb.ToString());
 								}
 								else
 								{
