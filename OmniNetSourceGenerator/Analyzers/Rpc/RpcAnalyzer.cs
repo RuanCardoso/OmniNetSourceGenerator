@@ -30,12 +30,23 @@ namespace OmniNetSourceGenerator.Analyzers
             isEnabledByDefault: true
         );
 
+        public static readonly DiagnosticDescriptor RpcMethodNamingConvention = new DiagnosticDescriptor(
+            id: "OMNI034",
+            title: "RPC Method Naming Convention",
+            messageFormat: "The RPC method '{0}' should end with 'Rpc' suffix for better code readability",
+            category: "Design",
+            defaultSeverity: DiagnosticSeverity.Info,
+            isEnabledByDefault: true,
+            description: "Following a consistent naming convention helps identify RPC methods at a glance and improves code maintainability."
+        );
+
         private readonly DiagnosticDescriptor[] descriptors = new DiagnosticDescriptor[]
         {
             RpcMethodShouldBePrivate,
             GenHelper.InheritanceConstraintViolation,
             StaticRpcMethod,
             GenHelper.PartialKeywordMissing,
+            RpcMethodNamingConvention,
         };
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(descriptors);
@@ -63,17 +74,27 @@ namespace OmniNetSourceGenerator.Analyzers
                         );
                     }
 
+                    if (!method.Identifier.Text.EndsWith("Rpc", StringComparison.Ordinal))
+                    {
+                        cContext.ReportDiagnostic(
+                            RpcMethodNamingConvention,
+                            method.Identifier.GetLocation(),
+                            method.Identifier.Text
+                        );
+                    }
+
+                    if (!method.HasModifier(SyntaxKind.PrivateKeyword))
+                    {
+                        cContext.ReportDiagnostic(
+                            RpcMethodShouldBePrivate,
+                            method.Identifier.GetLocation(),
+                            method.Identifier.Text
+                        );
+                    }
+
                     if (method.Parent is ClassDeclarationSyntax @class)
                     {
                         GenHelper.ReportPartialKeywordRequirement(cContext, @class, method.Identifier.GetLocation());
-                        if (!method.HasModifier(SyntaxKind.PrivateKeyword))
-                        {
-                            cContext.ReportDiagnostic(
-                                RpcMethodShouldBePrivate,
-                                method.Identifier.GetLocation(),
-                                method.Identifier.Text
-                            );
-                        }
 
                         bool isNetworkBehaviour = @class.InheritsFromClass(context.SemanticModel, "NetworkBehaviour");
                         bool isClientBehaviour = @class.InheritsFromClass(context.SemanticModel, "ClientBehaviour");

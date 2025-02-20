@@ -88,7 +88,7 @@ namespace OmniNetSourceGenerator
 									sb.Append(currentNamespace.NormalizeWhitespace().ToString());
 								}
 
-								context.AddSource($"{parentClass.Identifier.ToFullString()}_networkservice_injection_generated_code.cs", sb.ToString());
+								context.AddSource($"{parentClass.Identifier.Text}_networkservice_injection_generated_code.cs", sb.ToString());
 							}
 							else
 							{
