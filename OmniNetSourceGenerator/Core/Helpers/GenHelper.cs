@@ -1,6 +1,9 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Text;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 using SourceGenerator.Extensions;
 
 namespace SourceGenerator.Helpers
@@ -143,4 +146,16 @@ namespace SourceGenerator.Helpers
 			return SyntaxFactory.ParseStatement("");
 		}
 	}
+
+#if DEBUG
+	internal static class Logger
+	{
+		private static readonly List<string> _logs = new List<string>();
+		public static void Print(string msg) => _logs.Add("//\t" + msg);
+		public static void Flush(GeneratorExecutionContext context)
+		{
+			context.AddSource($"logs.g.cs", SourceText.From(string.Join("\n", _logs), Encoding.UTF8));
+		}
+	}
+#endif
 }
