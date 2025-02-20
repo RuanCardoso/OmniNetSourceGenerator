@@ -69,7 +69,7 @@ namespace OmniNetSourceGenerator
                                             args.Add("0");
                                     }
 
-                                    methodBody.AppendLine($"    {methodName}({string.Join(", ", args)});");
+                                    methodBody.AppendLine($"{methodName}({string.Join(", ", args)});");
                                 }
 
                                 methodBody.AppendLine("}");

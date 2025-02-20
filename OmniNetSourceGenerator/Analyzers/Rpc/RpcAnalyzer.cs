@@ -35,7 +35,7 @@ namespace OmniNetSourceGenerator.Analyzers
             RpcMethodShouldBePrivate,
             GenHelper.InheritanceConstraintViolation,
             StaticRpcMethod,
-            GenHelper.PartialKeywordMissing
+            GenHelper.PartialKeywordMissing,
         };
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(descriptors);
@@ -73,6 +73,16 @@ namespace OmniNetSourceGenerator.Analyzers
                                 method.Identifier.GetLocation(),
                                 method.Identifier.Text
                             );
+                        }
+
+                        bool isNetworkBehaviour = @class.InheritsFromClass(context.SemanticModel, "NetworkBehaviour");
+                        bool isClientBehaviour = @class.InheritsFromClass(context.SemanticModel, "ClientBehaviour");
+                        bool isServerBehaviour = @class.InheritsFromClass(context.SemanticModel, "ServerBehaviour");
+                        bool isDualBehaviour = @class.InheritsFromClass(context.SemanticModel, "DualBehaviour");
+
+                        if (!isNetworkBehaviour && !isClientBehaviour && !isServerBehaviour && !isDualBehaviour)
+                        {
+                            GenHelper.ReportInheritanceRequirement(cContext, @class.Identifier.Text, method.Identifier.GetLocation());
                         }
                     }
                 }

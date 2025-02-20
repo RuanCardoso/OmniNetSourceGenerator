@@ -2,7 +2,7 @@
 
 #nullable disable
 
-public partial class Program : NetworkBehaviour
+public partial class Program : DualBehaviour
 {
 	public static void Main(string[] args) { }
 }
@@ -17,7 +17,7 @@ namespace OmniNet
 		[Server(2)]
 		private void RpcMethod2(DataBuffer buffer, NetworkPeer peer)
 		{
-            
+
 		}
 	}
 }
