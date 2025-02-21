@@ -116,7 +116,7 @@ namespace OmniNetSourceGenerator
                                     sb.Append(currentNamespace.NormalizeWhitespace().ToString());
                                 }
 
-                                context.AddSource($"{parentClass.Identifier.Text}_rpc_usage_generated_code_{parentClass.GetHashCode()}.cs", sb.ToString());
+                                context.AddSource($"{parentClass.Identifier.Text}_rpc_usage_generated_code_.cs", sb.ToString());
                             }
                         }
                     }
