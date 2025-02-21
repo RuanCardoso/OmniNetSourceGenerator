@@ -94,7 +94,15 @@ namespace SourceGenerator.Extensions
 
 		public static IEnumerable<ClassStructure> GroupByDeclaringClass(this IEnumerable<MemberDeclarationSyntax> members)
 		{
-			return members.GroupBy(member => (ClassDeclarationSyntax)member.Parent).Select(group => new ClassStructure(group.Key, group));
+			return members
+				.GroupBy(
+					member => ((ClassDeclarationSyntax)member.Parent).Identifier.Text,
+					member => member,
+					(className, groupMembers) =>
+					{
+						var firstClass = (ClassDeclarationSyntax)groupMembers.First().Parent;
+						return new ClassStructure(firstClass, groupMembers);
+					});
 		}
 
 		public static IEnumerable<T> GetDescendantsOfType<T>(this SyntaxNode node) where T : SyntaxNode
