@@ -4,11 +4,23 @@
 
 public partial class Program : NetworkBehaviour
 {
-	public static void Main(string[] args) { }
+
 }
 
 namespace OmniNet
 {
+	public partial class PlayerBaseRoot : Program
+	{
+		[NetworkVariable]
+		private int m_VidaMana = 10;
+
+		[Server(1)]
+		private void RpcTesta()
+		{
+
+		}
+	}
+
 	public partial class PlayerBaseRoot : Program
 	{
 		[NetworkVariable]
@@ -29,7 +41,7 @@ namespace OmniNet
 		[Server(1)]
 		private void RpcTest2()
 		{
-
+			m_VidaMana = 1;
 		}
 	}
 }

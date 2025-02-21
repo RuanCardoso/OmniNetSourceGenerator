@@ -118,6 +118,10 @@ namespace OmniNetSourceGenerator
 
                                 context.AddSource($"{parentClass.Identifier.Text}_rpc_usage_generated_code_.cs", sb.ToString());
                             }
+                            else
+                            {
+                                GenHelper.ReportPartialKeywordRequirement(new Context(context), fromClass);
+                            }
                         }
                     }
                 }
