@@ -80,6 +80,19 @@ namespace SourceGenerator.Helpers
 			}
 		}
 
+		public static void ReportPartialKeywordRequirement(Context context, StructDeclarationSyntax @struct, Location location = null)
+		{
+			if (!@struct.HasModifier(SyntaxKind.PartialKeyword))
+			{
+				string structName = @struct.Identifier.Text;
+				context.ReportDiagnostic(
+					PartialKeywordMissing,
+					location,
+					structName
+				);
+			}
+		}
+
 		public static bool ReportInvalidFieldNamingIsUpper(Context context, string fieldName, Location location = null)
 		{
 			if (!char.IsUpper(fieldName[0]))

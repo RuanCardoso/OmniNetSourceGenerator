@@ -112,6 +112,12 @@ namespace OmniNetSourceGenerator
 										}
 
 										TypeSyntax declarationType = field.Declaration.Type;
+										ITypeSymbol typeSymbol = classModel.GetTypeInfo(declarationType).Type;
+										if (typeSymbol.IsDelegate())
+										{
+											continue;
+										}
+
 										foreach (VariableDeclaratorSyntax variableSyntax in field.Declaration.Variables)
 										{
 											string variableName = variableSyntax.Identifier.Text;

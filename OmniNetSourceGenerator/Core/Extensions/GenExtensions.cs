@@ -3,12 +3,39 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace SourceGenerator.Extensions
 {
 	public static class GenExtensions
 	{
+		public static bool IsDelegate(this ITypeSymbol symbol)
+		{
+			if (symbol is INamedTypeSymbol namedTypeSymbol)
+			{
+				return namedTypeSymbol.TypeKind == TypeKind.Delegate;
+			}
+
+			return false;
+		}
+
+		public static ImmutableArray<ITypeSymbol> GetDelegateParameters(this ITypeSymbol symbol)
+		{
+			if (symbol is INamedTypeSymbol namedTypeSymbol)
+			{
+				if (namedTypeSymbol.TypeKind == TypeKind.Delegate)
+				{
+					if (namedTypeSymbol.IsGenericType)
+					{
+						return namedTypeSymbol.TypeArguments;
+					}
+				}
+			}
+
+			return ImmutableArray<ITypeSymbol>.Empty;
+		}
+
 		public static bool HasAttributeOfType(this ITypeSymbol symbol, string baseAttributeName)
 		{
 			return symbol.GetAttributes().Any(x =>
@@ -135,10 +162,28 @@ namespace SourceGenerator.Extensions
 			return default;
 		}
 
+		public static NamespaceDeclarationSyntax GetNamespace(this StructDeclarationSyntax @struct, out bool hasNamespace)
+		{
+			hasNamespace = false;
+			if (@struct.Parent is NamespaceDeclarationSyntax @namespace)
+			{
+				hasNamespace = true;
+				return @namespace;
+			}
+
+			return default;
+		}
+
 		public static ClassDeclarationSyntax Clear(this ClassDeclarationSyntax @class, out ClassDeclarationSyntax fromClass)
 		{
 			fromClass = @class;
-			return @class.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>());
+			return @class.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>()).WithAttributeLists(SyntaxFactory.List<AttributeListSyntax>());
+		}
+
+		public static StructDeclarationSyntax Clear(this StructDeclarationSyntax @struct, out StructDeclarationSyntax fromStruct)
+		{
+			fromStruct = @struct;
+			return @struct.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>()).WithAttributeLists(SyntaxFactory.List<AttributeListSyntax>());
 		}
 
 		public static NamespaceDeclarationSyntax Clear(this NamespaceDeclarationSyntax @namespace, out NamespaceDeclarationSyntax fromNamespace)

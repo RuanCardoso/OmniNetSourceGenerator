@@ -37,18 +37,40 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue> where
 	public Action<bool> OnUpdate; // true to send to players
 }
 
-public class NetVarBehaviour
+public class NetVarBehaviour : MonoBehaviour
 {
 
 	protected virtual void SyncNetworkState(NetworkPeer peer)
 	{
 	}
+
+	protected void ___RegisterNetworkVariable___(string propertyName, byte propertyId, bool requiresOwnership,
+			bool isClientAuthority, bool checkEquality)
+	{
+	}
+
+	protected virtual void ___RegisterNetworkVariables___()
+	{
+	}
 }
 
+public class MonoBehaviour
+{
+}
 
 public class DataBuffer : IDisposable
 {
+
+	public DataBuffer() { }
+
 	public int Length { get; set; }
+
+	public static DataBuffer Rent()
+	{
+		return default;
+	}
+
+	public void Write<T>(T value) { }
 
 	public T Read<T>()
 	{
@@ -59,6 +81,8 @@ public class DataBuffer : IDisposable
 	{
 		return default;
 	}
+
+	public void WriteAsBinary<T>(T value) { }
 
 	public T Deserialize<T>(NetworkPeer peer, bool IsServer)
 	{
@@ -341,11 +365,14 @@ namespace Omni.Core
 	}
 }
 
-public class NetworkManager
+namespace Omni.Core
 {
-	public static NetworkPeer SharedPeer;
-	public static NetworkPeer LocalPeer;
-	public static NetPool Pool;
+	public partial class NetworkManager
+	{
+		public static NetworkPeer SharedPeer;
+		public static NetworkPeer LocalPeer;
+		public static NetPool Pool;
+	}
 }
 
 public class NetPool()
@@ -356,35 +383,320 @@ public class NetPool()
 	}
 }
 
-public class ServerBehaviour : NetVarBehaviour
+namespace Omni.Core
 {
-	protected virtual void ___OnPropertyChanged___(
-		string propertyName,
-		byte propertyId,
-		NetworkPeer peer,
-		DataBuffer buffer
-	)
-	{ }
 
-	[EditorBrowsable(EditorBrowsableState.Never)]
-	[Obsolete("Don't override this method! The source generator will override it.")]
-	protected virtual void ___InjectServices___()
+	public class ServerBehaviour : NetVarBehaviour
 	{
+		protected virtual void Awake()
+		{
 
+		}
+
+		protected virtual void Start() { }
+		protected virtual void ___OnPropertyChanged___(
+			string propertyName,
+			byte propertyId,
+			NetworkPeer peer,
+			DataBuffer buffer
+		)
+		{ }
+
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		[Obsolete("Don't override this method! The source generator will override it.")]
+		protected virtual void ___InjectServices___()
+		{
+
+		}
+
+
+		protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
+		{
+			return false;
+		}
+
+		protected virtual void ___NotifyCollectionChange___() { }
+
+		public class Event
+		{
+			public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+
+			/// <summary>
+			/// Sends a manual 'NetworkVariable' message to a specific client with the specified property and property ID.
+			/// </summary>
+			/// <typeparam name="T">The type of the property to synchronize.</typeparam>
+			/// <param name="property">The property value to synchronize.</param>
+			/// <param name="propertyId">The ID of the property being synchronized.</param>
+			/// <param name="peer">The target client to receive the 'NetworkVariable' message.</param>
+			public void NetworkVariableSyncToPeer<T>(T property, byte propertyId, NetworkPeer peer)
+			{
+
+			}
+		}
+
+		public Event2 Server;
+		public Event2 Client;
 	}
 
-
-	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
+	public class ClientBehaviour : NetVarBehaviour
 	{
-		return false;
+		protected virtual void Awake()
+		{
+
+		}
+
+		protected virtual void Start() { }
+		protected virtual void ___OnPropertyChanged___(
+			string propertyName,
+			byte propertyId,
+			NetworkPeer peer,
+			DataBuffer buffer
+		)
+		{ }
+
+		protected virtual void ___NotifyCollectionChange___() { }
+
+		protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
+		{
+			return false;
+		}
+
+		public class Event
+		{
+			public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+		}
+
+		public Event2 Server;
+		public Event2 Client;
 	}
 
-	protected virtual void ___NotifyCollectionChange___() { }
-
-	public class Event
+	public class DualBehaviour
 	{
-		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+		protected virtual void Awake()
+		{
 
+		}
+
+		protected virtual void Start() { }
+
+		protected virtual void ___OnPropertyChanged___(
+			string propertyName,
+			byte propertyId,
+			NetworkPeer peer,
+			DataBuffer buffer
+		)
+		{ }
+
+		protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
+		{
+			return false;
+		}
+
+		protected virtual void ___NotifyCollectionChange___() { }
+
+		public class Event
+		{
+			public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+		}
+
+		public Event2 Server;
+		public Event2 Client;
+	}
+
+	public class NetworkBehaviour : NetVarBehaviour
+	{
+		public bool IsMine => false;
+		public bool IsServer => false;
+		public bool IsClient => false;
+
+		public NetworkIdentity Identity { get; set; }
+
+		protected virtual void Awake()
+		{
+
+		}
+
+		protected virtual void Start() { }
+
+		protected virtual void ___OnPropertyChanged___(
+			string propertyName,
+			byte propertyId,
+			NetworkPeer peer,
+			DataBuffer buffer
+		)
+		{ }
+
+		protected virtual void ___NotifyCollectionChange___() { }
+
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		[Obsolete("Don't override this method! The source generator will override it.")]
+		protected virtual void ___InjectServices___()
+		{
+
+		}
+
+		protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
+		{
+			return false;
+		}
+
+		public class Event
+		{
+			/// <summary>
+			/// Sends a manual 'NetworkVariable' message to a specific client with the specified property and property ID.
+			/// </summary>
+			/// <typeparam name="T">The type of the property to synchronize.</typeparam>
+			/// <param name="property">The property value to synchronize.</param>
+			/// <param name="propertyId">The ID of the property being synchronized.</param>
+			/// <param name="peer">The target client to receive the 'NetworkVariable' message.</param>
+			public void NetworkVariableSyncToPeer<T>(T property, byte propertyId, NetworkPeer peer)
+			{
+
+			}
+			public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
+
+			public void Invoke(byte msgId, ServerOptions options) { }
+			public void Invoke(byte msgId, ClientOptions options) { }
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1>(byte msgId, T1 p1, ClientOptions options = default)
+					where T1 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1, T2>(byte msgId, T1 p1, T2 p2, ClientOptions options = default)
+				where T1 : unmanaged
+				where T2 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1, T2, T3>(
+				byte msgId,
+				T1 p1,
+				T2 p2,
+				T3 p3,
+				ClientOptions options = default
+			)
+				where T1 : unmanaged
+				where T2 : unmanaged
+				where T3 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1, T2, T3, T4>(
+				byte msgId,
+				T1 p1,
+				T2 p2,
+				T3 p3,
+				T4 p4,
+				ClientOptions options = default
+			)
+				where T1 : unmanaged
+				where T2 : unmanaged
+				where T3 : unmanaged
+				where T4 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1, T2, T3, T4, T5>(
+				byte msgId,
+				T1 p1,
+				T2 p2,
+				T3 p3,
+				T4 p4,
+				T5 p5,
+				ClientOptions options = default
+			)
+				where T1 : unmanaged
+				where T2 : unmanaged
+				where T3 : unmanaged
+				where T4 : unmanaged
+				where T5 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1>(byte msgId, T1 p1, ServerOptions options = default)
+					where T1 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1, T2>(byte msgId, T1 p1, T2 p2, ServerOptions options = default)
+				where T1 : unmanaged
+				where T2 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1, T2, T3>(
+				byte msgId,
+				T1 p1,
+				T2 p2,
+				T3 p3,
+				ServerOptions options = default
+			)
+				where T1 : unmanaged
+				where T2 : unmanaged
+				where T3 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1, T2, T3, T4>(
+				byte msgId,
+				T1 p1,
+				T2 p2,
+				T3 p3,
+				T4 p4,
+				ServerOptions options = default
+			)
+				where T1 : unmanaged
+				where T2 : unmanaged
+				where T3 : unmanaged
+				where T4 : unmanaged
+			{
+
+			}
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			public void Invoke<T1, T2, T3, T4, T5>(
+				byte msgId,
+				T1 p1,
+				T2 p2,
+				T3 p3,
+				T4 p4,
+				T5 p5,
+				ServerOptions options = default
+			)
+				where T1 : unmanaged
+				where T2 : unmanaged
+				where T3 : unmanaged
+				where T4 : unmanaged
+				where T5 : unmanaged
+			{
+
+			}
+		}
+
+		public Event Server;
+		public Event Client;
+	}
+
+	public class Event2
+	{
 		/// <summary>
 		/// Sends a manual 'NetworkVariable' message to a specific client with the specified property and property ID.
 		/// </summary>
@@ -396,111 +708,84 @@ public class ServerBehaviour : NetVarBehaviour
 		{
 
 		}
-	}
-
-	public Event2 Server;
-	public Event2 Client;
-}
-
-public class ClientBehaviour : NetVarBehaviour
-{
-	protected virtual void ___OnPropertyChanged___(
-		string propertyName,
-		byte propertyId,
-		NetworkPeer peer,
-		DataBuffer buffer
-	)
-	{ }
-
-	protected virtual void ___NotifyCollectionChange___() { }
-
-	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
-	{
-		return false;
-	}
-
-	public class Event
-	{
 		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
-	}
-
-	public Event2 Server;
-	public Event2 Client;
-}
-
-public class DualBehaviour
-{
-	protected virtual void ___OnPropertyChanged___(
-		string propertyName,
-		byte propertyId,
-		NetworkPeer peer,
-		DataBuffer buffer
-	)
-	{ }
-
-	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
-	{
-		return false;
-	}
-
-	protected virtual void ___NotifyCollectionChange___() { }
-
-	public class Event
-	{
-		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
-	}
-
-	public Event2 Server;
-	public Event2 Client;
-}
-
-public class NetworkBehaviour : NetVarBehaviour
-{
-	public bool IsMine => false;
-	public bool IsServer => false;
-	public bool IsClient => false;
-
-	public NetworkIdentity Identity { get; set; }
-
-	protected virtual void ___OnPropertyChanged___(
-		string propertyName,
-		byte propertyId,
-		NetworkPeer peer,
-		DataBuffer buffer
-	)
-	{ }
-
-	protected virtual void ___NotifyCollectionChange___() { }
-
-	[EditorBrowsable(EditorBrowsableState.Never)]
-	[Obsolete("Don't override this method! The source generator will override it.")]
-	protected virtual void ___InjectServices___()
-	{
-
-	}
-
-	protected virtual bool OnNetworkVariableDeepEquals<T>(T oldValue, T newValue, string name, byte id)
-	{
-		return false;
-	}
-
-	public class Event
-	{
-		/// <summary>
-		/// Sends a manual 'NetworkVariable' message to a specific client with the specified property and property ID.
-		/// </summary>
-		/// <typeparam name="T">The type of the property to synchronize.</typeparam>
-		/// <param name="property">The property value to synchronize.</param>
-		/// <param name="propertyId">The ID of the property being synchronized.</param>
-		/// <param name="peer">The target client to receive the 'NetworkVariable' message.</param>
-		public void NetworkVariableSyncToPeer<T>(T property, byte propertyId, NetworkPeer peer)
-		{
-
-		}
-		public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
-
-		public void Invoke(byte msgId, ServerOptions options) { }
+		public void Invoke(byte msgId, NetworkPeer peer, ServerOptions options) { }
 		public void Invoke(byte msgId, ClientOptions options) { }
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1>(byte msgId, NetworkPeer peer, T1 p1, ServerOptions options = default)
+				where T1 : unmanaged
+		{
+
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2>(
+			byte msgId,
+			NetworkPeer peer,
+			T1 p1,
+			T2 p2,
+			ServerOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+		{
+
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3>(
+			byte msgId,
+			NetworkPeer peer,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			ServerOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+		{
+
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3, T4>(
+			byte msgId,
+			NetworkPeer peer,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			T4 p4,
+			ServerOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+			where T4 : unmanaged
+		{
+
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Invoke<T1, T2, T3, T4, T5>(
+			byte msgId,
+			NetworkPeer peer,
+			T1 p1,
+			T2 p2,
+			T3 p3,
+			T4 p4,
+			T5 p5,
+			ServerOptions options = default
+		)
+			where T1 : unmanaged
+			where T2 : unmanaged
+			where T3 : unmanaged
+			where T4 : unmanaged
+			where T5 : unmanaged
+		{
+
+		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void Invoke<T1>(byte msgId, T1 p1, ClientOptions options = default)
@@ -567,233 +852,5 @@ public class NetworkBehaviour : NetVarBehaviour
 		{
 
 		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void Invoke<T1>(byte msgId, T1 p1, ServerOptions options = default)
-				where T1 : unmanaged
-		{
-
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void Invoke<T1, T2>(byte msgId, T1 p1, T2 p2, ServerOptions options = default)
-			where T1 : unmanaged
-			where T2 : unmanaged
-		{
-
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void Invoke<T1, T2, T3>(
-			byte msgId,
-			T1 p1,
-			T2 p2,
-			T3 p3,
-			ServerOptions options = default
-		)
-			where T1 : unmanaged
-			where T2 : unmanaged
-			where T3 : unmanaged
-		{
-
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void Invoke<T1, T2, T3, T4>(
-			byte msgId,
-			T1 p1,
-			T2 p2,
-			T3 p3,
-			T4 p4,
-			ServerOptions options = default
-		)
-			where T1 : unmanaged
-			where T2 : unmanaged
-			where T3 : unmanaged
-			where T4 : unmanaged
-		{
-
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void Invoke<T1, T2, T3, T4, T5>(
-			byte msgId,
-			T1 p1,
-			T2 p2,
-			T3 p3,
-			T4 p4,
-			T5 p5,
-			ServerOptions options = default
-		)
-			where T1 : unmanaged
-			where T2 : unmanaged
-			where T3 : unmanaged
-			where T4 : unmanaged
-			where T5 : unmanaged
-		{
-
-		}
-	}
-
-	public Event Server;
-	public Event Client;
-}
-
-public class Event2
-{
-	/// <summary>
-	/// Sends a manual 'NetworkVariable' message to a specific client with the specified property and property ID.
-	/// </summary>
-	/// <typeparam name="T">The type of the property to synchronize.</typeparam>
-	/// <param name="property">The property value to synchronize.</param>
-	/// <param name="propertyId">The ID of the property being synchronized.</param>
-	/// <param name="peer">The target client to receive the 'NetworkVariable' message.</param>
-	public void NetworkVariableSyncToPeer<T>(T property, byte propertyId, NetworkPeer peer)
-	{
-
-	}
-	public void NetworkVariableSync<T>(T property, byte propertyId, NetworkVariableOptions options) { }
-	public void Invoke(byte msgId, NetworkPeer peer, ServerOptions options) { }
-	public void Invoke(byte msgId, ClientOptions options) { }
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1>(byte msgId, NetworkPeer peer, T1 p1, ServerOptions options = default)
-			where T1 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1, T2>(
-		byte msgId,
-		NetworkPeer peer,
-		T1 p1,
-		T2 p2,
-		ServerOptions options = default
-	)
-		where T1 : unmanaged
-		where T2 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1, T2, T3>(
-		byte msgId,
-		NetworkPeer peer,
-		T1 p1,
-		T2 p2,
-		T3 p3,
-		ServerOptions options = default
-	)
-		where T1 : unmanaged
-		where T2 : unmanaged
-		where T3 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1, T2, T3, T4>(
-		byte msgId,
-		NetworkPeer peer,
-		T1 p1,
-		T2 p2,
-		T3 p3,
-		T4 p4,
-		ServerOptions options = default
-	)
-		where T1 : unmanaged
-		where T2 : unmanaged
-		where T3 : unmanaged
-		where T4 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1, T2, T3, T4, T5>(
-		byte msgId,
-		NetworkPeer peer,
-		T1 p1,
-		T2 p2,
-		T3 p3,
-		T4 p4,
-		T5 p5,
-		ServerOptions options = default
-	)
-		where T1 : unmanaged
-		where T2 : unmanaged
-		where T3 : unmanaged
-		where T4 : unmanaged
-		where T5 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1>(byte msgId, T1 p1, ClientOptions options = default)
-			where T1 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1, T2>(byte msgId, T1 p1, T2 p2, ClientOptions options = default)
-		where T1 : unmanaged
-		where T2 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1, T2, T3>(
-		byte msgId,
-		T1 p1,
-		T2 p2,
-		T3 p3,
-		ClientOptions options = default
-	)
-		where T1 : unmanaged
-		where T2 : unmanaged
-		where T3 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1, T2, T3, T4>(
-		byte msgId,
-		T1 p1,
-		T2 p2,
-		T3 p3,
-		T4 p4,
-		ClientOptions options = default
-	)
-		where T1 : unmanaged
-		where T2 : unmanaged
-		where T3 : unmanaged
-		where T4 : unmanaged
-	{
-
-	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public void Invoke<T1, T2, T3, T4, T5>(
-		byte msgId,
-		T1 p1,
-		T2 p2,
-		T3 p3,
-		T4 p4,
-		T5 p5,
-		ClientOptions options = default
-	)
-		where T1 : unmanaged
-		where T2 : unmanaged
-		where T3 : unmanaged
-		where T4 : unmanaged
-		where T5 : unmanaged
-	{
-
 	}
 }

@@ -1,47 +1,69 @@
-﻿using Omni.Core;
-
+﻿
 #nullable disable
 
-public partial class Program : NetworkBehaviour
+using System;
+using System.Collections.Generic;
+using Omni.Core;
+
+public partial class DebTyBase : NetworkBehaviour
 {
 
 }
 
+public partial class PlayerBase : DebTyBase
+{
+
+}
+
+public struct Vector3
+{
+	public float x { get; set; }
+	public float y { get; set; }
+	public float z { get; set; }
+	public int[] array { get; set; }
+}
+
 namespace OmniNet
 {
-	public partial class PlayerBaseRoot : Program
+	[DeltaSerializable(Enabled = true)]
+	public partial struct PlayerData
+	{
+		public int vida { get; set; }
+		public Vector3 position { get; set; }
+	}
+
+
+	public partial class Player : PlayerBase
 	{
 		[NetworkVariable]
-		private int m_VidaMana = 10;
+		private int m_Vida;
 
-		[Server(1)]
-		private void RpcTesta()
+		[NetworkVariable]
+		private Action<int, int, List<Player>> m_OnHealthChanged;
+
+		[NetworkVariable]
+		private ObservableDictionary<int, int> m_Dictionaryy;
+
+		static void Main()
 		{
 
 		}
-	}
 
-	public partial class PlayerBaseRoot : Program
-	{
-		[NetworkVariable]
-		private int m_Vida = 10;
-
-		[Server(1)]
-		private void RpcTest()
+		void Test()
 		{
-
+			Vida = 10;
+			// DelegateTest = null;
+			SyncVida();
 		}
-	}
 
-	public partial class PlayerBaseRoot : Program
-	{
-		[NetworkVariable]
-		private int m_Mana = 10;
+		// partial void OnDelegateTestChanged(Func<int> prevDelegateTest, Func<int> nextDelegateTest, bool isWriting)
+		// {
+		// 	throw new NotImplementedException();
+		// }
 
-		[Server(1)]
-		private void RpcTest2()
+		partial void OnVidaChanged(int prevVida, int nextVida, bool isWriting)
 		{
-			m_VidaMana = 1;
+			throw new NotImplementedException();
 		}
 	}
 }

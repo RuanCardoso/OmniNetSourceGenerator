@@ -39,8 +39,23 @@ namespace OmniNetSourceGenerator
                                 .Where(m => m is FieldDeclarationSyntax || m is PropertyDeclarationSyntax)
                                 .ToList();
 
-                            var writeDeltaMethod = CreateWriteDeltaMethod(members, parentStruct.Identifier.Text);
-                            var readDeltaMethod = CreateReadDeltaMethod(members);
+                            // Ler o parâmetro Enabled do atributo
+                            bool enabled = true; // valor padrão
+                            var attribute = fromStruct.GetAttribute("DeltaSerializable");
+                            if (attribute != null)
+                            {
+                                var enabledExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("Enabled", ArgumentIndex.First);
+                                if (enabledExpression != null)
+                                {
+                                    if (bool.TryParse(enabledExpression.Token.ValueText, out bool enabledValue))
+                                    {
+                                        enabled = enabledValue;
+                                    }
+                                }
+                            }
+
+                            var writeDeltaMethod = CreateWriteDeltaMethod(members, parentStruct.Identifier.Text, enabled, context);
+                            var readDeltaMethod = CreateReadDeltaMethod(members, enabled, context);
 
                             parentStruct = parentStruct.AddMembers(writeDeltaMethod, readDeltaMethod);
 
@@ -67,34 +82,146 @@ namespace OmniNetSourceGenerator
             }
         }
 
-        private MethodDeclarationSyntax CreateReadDeltaMethod(List<MemberDeclarationSyntax> members)
+        private MethodDeclarationSyntax CreateReadDeltaMethod(List<MemberDeclarationSyntax> members, bool enabled, GeneratorExecutionContext context)
         {
             var statements = new List<StatementSyntax>();
+            var validMembers = new List<MemberDeclarationSyntax>();
 
-            // Determinar o tipo do bitmask baseado na quantidade de campos
-            string bitmaskType = members.Count <= 8 ? "byte" :
-                               members.Count <= 16 ? "ushort" :
-                               members.Count <= 32 ? "uint" : "ulong";
-
-            statements.Add(SyntaxFactory.ParseStatement($"{bitmaskType} bytemask = buffer.Read<{bitmaskType}>();"));
-            statements.Add(SyntaxFactory.ParseStatement(""));
-
-            int bitIndex = 0;
+            // Filtrar apenas membros que são tipos de valor
             foreach (var member in members)
             {
-                string memberName = member is FieldDeclarationSyntax field
-                    ? field.Declaration.Variables.First().Identifier.Text
-                    : ((PropertyDeclarationSyntax)member).Identifier.Text;
-
                 TypeSyntax memberType = member is FieldDeclarationSyntax fieldDecl
                     ? fieldDecl.Declaration.Type
                     : ((PropertyDeclarationSyntax)member).Type;
 
-                statements.Add(SyntaxFactory.ParseStatement(
-                    $"if ((bytemask & ({bitmaskType})(1 << {bitIndex})) != 0) {memberName} = buffer.Read<{memberType}>();"
-                ));
+                var semanticModel = context.Compilation.GetSemanticModel(member.SyntaxTree);
+                var typeInfo = semanticModel.GetTypeInfo(memberType);
 
-                bitIndex++;
+                if (IsValueType(typeInfo.Type))
+                {
+                    validMembers.Add(member);
+                }
+            }
+
+            if (enabled)
+            {
+                // Determinar o tipo do bitmask baseado na quantidade de campos válidos
+                string bitmaskType = validMembers.Count <= 8 ? "byte" :
+                                   validMembers.Count <= 16 ? "ushort" :
+                                   validMembers.Count <= 32 ? "uint" : "ulong";
+
+                statements.Add(SyntaxFactory.ParseStatement($"{bitmaskType} bytemask = buffer.Read<{bitmaskType}>();"));
+                statements.Add(SyntaxFactory.ParseStatement(""));
+
+                int bitIndex = 0;
+                foreach (var member in validMembers)
+                {
+                    string memberName = member is FieldDeclarationSyntax field
+                        ? field.Declaration.Variables.First().Identifier.Text
+                        : ((PropertyDeclarationSyntax)member).Identifier.Text;
+
+                    TypeSyntax memberType = member is FieldDeclarationSyntax fieldDecl
+                        ? fieldDecl.Declaration.Type
+                        : ((PropertyDeclarationSyntax)member).Type;
+
+                    var semanticModel = context.Compilation.GetSemanticModel(member.SyntaxTree);
+                    var typeInfo = semanticModel.GetTypeInfo(memberType);
+
+                    if (HasPublicMembers(typeInfo.Type))
+                    {
+                        // Para tipos com campos públicos, deserializar cada campo individualmente
+                        var publicMembers = GetPublicMembers(typeInfo.Type);
+
+                        // Criar uma variável temporária para armazenar a nova instância
+                        statements.Add(SyntaxFactory.ParseStatement($"var temp{memberName} = {memberName};"));
+
+                        foreach (var pMember in publicMembers)
+                        {
+                            string memberAccess = "";
+                            string memberTypeName = "";
+
+                            if (pMember is IFieldSymbol fieldSymbol)
+                            {
+                                memberAccess = fieldSymbol.Name;
+                                memberTypeName = fieldSymbol.Type.ToString();
+                            }
+                            else if (pMember is IPropertySymbol propertySymbol)
+                            {
+                                memberAccess = propertySymbol.Name;
+                                memberTypeName = propertySymbol.Type.ToString();
+                            }
+
+                            statements.Add(SyntaxFactory.ParseStatement(
+                                $"if ((bytemask & ({bitmaskType})(1 << {bitIndex})) != 0) temp{memberName}.{memberAccess} = buffer.Read<{memberTypeName}>();"
+                            ));
+                            bitIndex++;
+                        }
+
+                        // Atribuir a variável temporária de volta ao membro original
+                        statements.Add(SyntaxFactory.ParseStatement($"{memberName} = temp{memberName};"));
+                    }
+                    else
+                    {
+                        // Para tipos sem campos públicos, deserializar o objeto inteiro
+                        statements.Add(SyntaxFactory.ParseStatement(
+                            $"if ((bytemask & ({bitmaskType})(1 << {bitIndex})) != 0) {memberName} = buffer.Read<{memberType}>();"
+                        ));
+                        bitIndex++;
+                    }
+                }
+            }
+            else
+            {
+                // Modo completo - lê todos os campos válidos
+                foreach (var member in validMembers)
+                {
+                    string memberName = member is FieldDeclarationSyntax field
+                        ? field.Declaration.Variables.First().Identifier.Text
+                        : ((PropertyDeclarationSyntax)member).Identifier.Text;
+
+                    TypeSyntax memberType = member is FieldDeclarationSyntax fieldDecl
+                        ? fieldDecl.Declaration.Type
+                        : ((PropertyDeclarationSyntax)member).Type;
+
+                    var semanticModel = context.Compilation.GetSemanticModel(member.SyntaxTree);
+                    var typeInfo = semanticModel.GetTypeInfo(memberType);
+
+                    if (HasPublicMembers(typeInfo.Type))
+                    {
+                        // Para tipos com campos públicos, deserializar cada campo individualmente
+                        var publicMembers = GetPublicMembers(typeInfo.Type);
+
+                        // Criar uma variável temporária para armazenar a nova instância
+                        statements.Add(SyntaxFactory.ParseStatement($"var temp{memberName} = {memberName};"));
+
+                        foreach (var pMember in publicMembers)
+                        {
+                            string memberAccess = "";
+                            string memberTypeName = "";
+
+                            if (pMember is IFieldSymbol fieldSymbol)
+                            {
+                                memberAccess = fieldSymbol.Name;
+                                memberTypeName = fieldSymbol.Type.ToString();
+                            }
+                            else if (pMember is IPropertySymbol propertySymbol)
+                            {
+                                memberAccess = propertySymbol.Name;
+                                memberTypeName = propertySymbol.Type.ToString();
+                            }
+
+                            statements.Add(SyntaxFactory.ParseStatement($"temp{memberName}.{memberAccess} = buffer.Read<{memberTypeName}>();"));
+                        }
+
+                        // Atribuir a variável temporária de volta ao membro original
+                        statements.Add(SyntaxFactory.ParseStatement($"{memberName} = temp{memberName};"));
+                    }
+                    else
+                    {
+                        // Para tipos sem campos públicos, deserializar o objeto inteiro
+                        statements.Add(SyntaxFactory.ParseStatement($"{memberName} = buffer.Read<{memberType}>();"));
+                    }
+                }
             }
 
             return SyntaxFactory.MethodDeclaration(
@@ -118,53 +245,178 @@ namespace OmniNetSourceGenerator
             .WithBody(SyntaxFactory.Block(statements));
         }
 
-        private MethodDeclarationSyntax CreateWriteDeltaMethod(List<MemberDeclarationSyntax> members, string structName)
+        private MethodDeclarationSyntax CreateWriteDeltaMethod(List<MemberDeclarationSyntax> members, string structName, bool enabled, GeneratorExecutionContext context)
         {
             var statements = new List<StatementSyntax>();
 
-            // Determinar o tipo do bitmask baseado na quantidade de campos
-            string bitmaskType = members.Count <= 8 ? "byte" :
-                               members.Count <= 16 ? "ushort" :
-                               members.Count <= 32 ? "uint" : "ulong";
-
-            statements.Add(SyntaxFactory.ParseStatement($"{bitmaskType} bytemask = 0;"));
-            statements.Add(SyntaxFactory.ParseStatement(""));
-
-            int bitIndex = 0;
-            foreach (var member in members)
+            if (enabled)
             {
-                string memberName = member is FieldDeclarationSyntax field
-                    ? field.Declaration.Variables.First().Identifier.Text
-                    : ((PropertyDeclarationSyntax)member).Identifier.Text;
+                // Determinar o tipo do bitmask baseado na quantidade de campos válidos
+                string bitmaskType = members.Count <= 8 ? "byte" :
+                                   members.Count <= 16 ? "ushort" :
+                                   members.Count <= 32 ? "uint" : "ulong";
 
-                statements.Add(SyntaxFactory.ParseStatement(
-                    $"if ({memberName} != last.{memberName}) bytemask |= ({bitmaskType})(1 << {bitIndex});\n"
-                ));
+                statements.Add(SyntaxFactory.ParseStatement($"{bitmaskType} bytemask = 0;"));
+                statements.Add(SyntaxFactory.ParseStatement("bool hasChanges = false;"));
+                statements.Add(SyntaxFactory.ParseStatement(""));
 
-                bitIndex++;
+                int bitIndex = 0;
+                foreach (var member in members)
+                {
+                    string memberName = member is FieldDeclarationSyntax field
+                        ? field.Declaration.Variables.First().Identifier.Text
+                        : ((PropertyDeclarationSyntax)member).Identifier.Text;
+
+                    TypeSyntax memberType = member is FieldDeclarationSyntax fieldDecl
+                        ? fieldDecl.Declaration.Type
+                        : ((PropertyDeclarationSyntax)member).Type;
+
+                    var semanticModel = context.Compilation.GetSemanticModel(member.SyntaxTree);
+                    var typeInfo = semanticModel.GetTypeInfo(memberType);
+
+                    if (HasPublicMembers(typeInfo.Type))
+                    {
+                        // Para tipos com campos públicos, comparar cada campo individualmente
+                        var publicMembers = GetPublicMembers(typeInfo.Type);
+                        foreach (var pMember in publicMembers)
+                        {
+                            string memberAccess = "";
+                            string memberTypeName = "";
+
+                            if (pMember is IFieldSymbol fieldSymbol)
+                            {
+                                memberAccess = fieldSymbol.Name;
+                                memberTypeName = fieldSymbol.Type.ToString();
+                            }
+                            else if (pMember is IPropertySymbol propertySymbol)
+                            {
+                                memberAccess = propertySymbol.Name;
+                                memberTypeName = propertySymbol.Type.ToString();
+                            }
+
+                            statements.Add(SyntaxFactory.ParseStatement(
+                                $"if ({memberName}.{memberAccess} != last.{memberName}.{memberAccess}) {{ bytemask |= ({bitmaskType})(1 << {bitIndex}); hasChanges = true; }}"
+                            ));
+                            bitIndex++;
+                        }
+                    }
+                    else
+                    {
+                        // Para tipos sem campos públicos, comparar o objeto inteiro
+                        statements.Add(SyntaxFactory.ParseStatement(
+                            $"if ({memberName} != last.{memberName}) {{ bytemask |= ({bitmaskType})(1 << {bitIndex}); hasChanges = true; }}"
+                        ));
+                        bitIndex++;
+                    }
+                }
+
+                statements.Add(SyntaxFactory.ParseStatement(""));
+                statements.Add(SyntaxFactory.ParseStatement("DataBuffer buffer = NetworkManager.Pool.Rent();")); // disosed by the caller
+                statements.Add(SyntaxFactory.ParseStatement($"buffer.Write(bytemask);"));
+                statements.Add(SyntaxFactory.ParseStatement(""));
+
+                bitIndex = 0;
+                foreach (var member in members)
+                {
+                    string memberName = member is FieldDeclarationSyntax field
+                        ? field.Declaration.Variables.First().Identifier.Text
+                        : ((PropertyDeclarationSyntax)member).Identifier.Text;
+
+                    TypeSyntax memberType = member is FieldDeclarationSyntax fieldDecl
+                        ? fieldDecl.Declaration.Type
+                        : ((PropertyDeclarationSyntax)member).Type;
+
+                    var semanticModel = context.Compilation.GetSemanticModel(member.SyntaxTree);
+                    var typeInfo = semanticModel.GetTypeInfo(memberType);
+
+                    if (HasPublicMembers(typeInfo.Type))
+                    {
+                        // Para tipos com campos públicos, serializar cada campo individualmente
+                        var publicMembers = GetPublicMembers(typeInfo.Type);
+                        foreach (var pMember in publicMembers)
+                        {
+                            string memberAccess = "";
+                            string memberTypeName = "";
+
+                            if (pMember is IFieldSymbol fieldSymbol)
+                            {
+                                memberAccess = fieldSymbol.Name;
+                                memberTypeName = fieldSymbol.Type.ToString();
+                            }
+                            else if (pMember is IPropertySymbol propertySymbol)
+                            {
+                                memberAccess = propertySymbol.Name;
+                                memberTypeName = propertySymbol.Type.ToString();
+                            }
+
+                            statements.Add(SyntaxFactory.ParseStatement(
+                                $"if ((bytemask & ({bitmaskType})(1 << {bitIndex})) != 0) buffer.Write({memberName}.{memberAccess});"
+                            ));
+                            bitIndex++;
+                        }
+                    }
+                    else
+                    {
+                        // Para tipos sem campos públicos, serializar o objeto inteiro
+                        statements.Add(SyntaxFactory.ParseStatement(
+                            $"if ((bytemask & ({bitmaskType})(1 << {bitIndex})) != 0) buffer.Write({memberName});"
+                        ));
+                        bitIndex++;
+                    }
+                }
             }
-
-            statements.Add(SyntaxFactory.ParseStatement(""));
-            statements.Add(SyntaxFactory.ParseStatement("DataBuffer buffer = new();"));
-            statements.Add(SyntaxFactory.ParseStatement($"buffer.Write(bytemask);"));
-            statements.Add(SyntaxFactory.ParseStatement(""));
-
-            bitIndex = 0;
-            foreach (var member in members)
+            else
             {
-                string memberName = member is FieldDeclarationSyntax field
-                    ? field.Declaration.Variables.First().Identifier.Text
-                    : ((PropertyDeclarationSyntax)member).Identifier.Text;
+                // Modo completo - escreve todos os campos válidos
+                statements.Add(SyntaxFactory.ParseStatement("bool hasChanges = true;")); // No modo completo, sempre há mudanças
+                statements.Add(SyntaxFactory.ParseStatement("DataBuffer buffer = NetworkManager.Pool.Rent();")); // disosed by the caller
+                foreach (var member in members)
+                {
+                    string memberName = member is FieldDeclarationSyntax field
+                        ? field.Declaration.Variables.First().Identifier.Text
+                        : ((PropertyDeclarationSyntax)member).Identifier.Text;
 
-                statements.Add(SyntaxFactory.ParseStatement(
-                    $"if ((bytemask & ({bitmaskType})(1 << {bitIndex})) != 0) buffer.Write({memberName});"
-                ));
+                    TypeSyntax memberType = member is FieldDeclarationSyntax fieldDecl
+                        ? fieldDecl.Declaration.Type
+                        : ((PropertyDeclarationSyntax)member).Type;
 
-                bitIndex++;
+                    var semanticModel = context.Compilation.GetSemanticModel(member.SyntaxTree);
+                    var typeInfo = semanticModel.GetTypeInfo(memberType);
+
+                    if (HasPublicMembers(typeInfo.Type))
+                    {
+                        // Para tipos com campos públicos, serializar cada campo individualmente
+                        var publicMembers = GetPublicMembers(typeInfo.Type);
+                        foreach (var pMember in publicMembers)
+                        {
+                            string memberAccess = "";
+                            string memberTypeName = "";
+
+                            if (pMember is IFieldSymbol fieldSymbol)
+                            {
+                                memberAccess = fieldSymbol.Name;
+                                memberTypeName = fieldSymbol.Type.ToString();
+                            }
+                            else if (pMember is IPropertySymbol propertySymbol)
+                            {
+                                memberAccess = propertySymbol.Name;
+                                memberTypeName = propertySymbol.Type.ToString();
+                            }
+
+                            statements.Add(SyntaxFactory.ParseStatement($"buffer.Write({memberName}.{memberAccess});"));
+                        }
+                    }
+                    else
+                    {
+                        // Para tipos sem campos públicos, serializar o objeto inteiro
+                        statements.Add(SyntaxFactory.ParseStatement($"buffer.Write({memberName});"));
+                    }
+                }
             }
 
             statements.Add(SyntaxFactory.ParseStatement(""));
             statements.Add(SyntaxFactory.ParseStatement("last = this;"));
+            statements.Add(SyntaxFactory.ParseStatement("changed = hasChanges;"));
             statements.Add(SyntaxFactory.ParseStatement("return buffer;"));
 
             return SyntaxFactory.MethodDeclaration(
@@ -176,20 +428,71 @@ namespace OmniNetSourceGenerator
             )
             .WithParameterList(
                 SyntaxFactory.ParameterList(
-                    SyntaxFactory.SingletonSeparatedList(
-                        SyntaxFactory.Parameter(
-                            SyntaxFactory.Identifier("last")
-                        ).WithModifiers(
-                            SyntaxFactory.TokenList(
-                                SyntaxFactory.Token(SyntaxKind.RefKeyword)
+                    SyntaxFactory.SeparatedList<ParameterSyntax>(
+                        new SyntaxNodeOrToken[] {
+                            SyntaxFactory.Parameter(
+                                SyntaxFactory.Identifier("last")
+                            ).WithModifiers(
+                                SyntaxFactory.TokenList(
+                                    SyntaxFactory.Token(SyntaxKind.RefKeyword)
+                                )
+                            ).WithType(
+                                SyntaxFactory.ParseTypeName(structName)
+                            ),
+                            SyntaxFactory.Token(SyntaxKind.CommaToken),
+                            SyntaxFactory.Parameter(
+                                SyntaxFactory.Identifier("changed")
+                            ).WithModifiers(
+                                SyntaxFactory.TokenList(
+                                    SyntaxFactory.Token(SyntaxKind.OutKeyword)
+                                )
+                            ).WithType(
+                                SyntaxFactory.PredefinedType(
+                                    SyntaxFactory.Token(SyntaxKind.BoolKeyword)
+                                )
                             )
-                        ).WithType(
-                            SyntaxFactory.ParseTypeName(structName)
-                        )
+                        }
                     )
                 )
             )
             .WithBody(SyntaxFactory.Block(statements));
+        }
+
+        private bool IsValueType(ITypeSymbol typeSymbol)
+        {
+            return typeSymbol != null && typeSymbol.IsValueType;
+        }
+
+        private bool HasPublicMembers(ITypeSymbol typeSymbol)
+        {
+            if (typeSymbol == null) return false;
+
+            return typeSymbol.GetMembers()
+                .Any(m =>
+                    (m is IFieldSymbol field &&
+                     field.DeclaredAccessibility == Accessibility.Public &&
+                     !field.IsConst &&
+                     !field.IsStatic && IsValueType(typeSymbol)) ||
+                    (m is IPropertySymbol property &&
+                     property.DeclaredAccessibility == Accessibility.Public &&
+                     !property.IsStatic)
+                );
+        }
+
+        private IEnumerable<ISymbol> GetPublicMembers(ITypeSymbol typeSymbol)
+        {
+            if (typeSymbol == null) return Enumerable.Empty<ISymbol>();
+
+            return typeSymbol.GetMembers()
+                .Where(m =>
+                    (m is IFieldSymbol field &&
+                     field.DeclaredAccessibility == Accessibility.Public &&
+                     !field.IsConst &&
+                     !field.IsStatic) ||
+                    (m is IPropertySymbol property &&
+                     property.DeclaredAccessibility == Accessibility.Public &&
+                     !property.IsStatic)
+                );
         }
 
         public void Initialize(GeneratorInitializationContext context)

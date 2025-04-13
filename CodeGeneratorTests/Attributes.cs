@@ -20,8 +20,47 @@ namespace UnityEngine.Scripting
 	}
 }
 
+namespace UnityEngine.Scripting
+{
+	public class AlwaysLinkAssembly : Attribute { }
+}
+
+namespace UnityEngine
+{
+	public enum RuntimeInitializeLoadType
+	{
+		BeforeSceneLoad,
+		AfterSceneLoad
+	}
+
+	[System.AttributeUsage(System.AttributeTargets.Method)]
+	public class RuntimeInitializeOnLoadMethodAttribute : System.Attribute
+	{
+		public RuntimeInitializeLoadType loadType { get; }
+
+		public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType loadType = RuntimeInitializeLoadType.BeforeSceneLoad)
+		{
+			this.loadType = loadType;
+		}
+	}
+}
+
 namespace Omni.Core
 {
+	[AttributeUsage(AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
+	public sealed class DeltaSerializable : Attribute
+	{
+		/// <summary>
+		/// Gets or sets a value indicating whether the struct should be serialized.
+		/// </summary>
+		/// <value>
+		/// Default is <c>true</c>, meaning the struct will be serialized using delta compression.
+		/// If <c>false</c>, the struct will be serialized in full.
+		/// </value>
+		public bool Enabled { get; set; } = true;
+	}
+
+
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
 	public sealed class SerializeProperty : Attribute
 	{
@@ -85,7 +124,7 @@ namespace Omni.Core
 		public Client(byte id) { }
 	}
 
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Event, AllowMultiple = false, Inherited = true)]
 	public class NetworkVariable : Attribute
 	{
 		public byte Id { get; set; }
