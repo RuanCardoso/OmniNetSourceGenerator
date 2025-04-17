@@ -37,16 +37,11 @@ namespace OmniNetSourceGenerator
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("#nullable disable");
             sb.AppendLine("#pragma warning disable");
-            sb.AppendLine("using Omni.Core;");
-            sb.AppendLine("using UnityEngine;");
             sb.AppendLine("using UnityEngine.Scripting;");
-            sb.AppendLine("[assembly: AlwaysLinkAssembly]");
-
-            NamespaceDeclarationSyntax namespaceDeclaration = SyntaxFactory.NamespaceDeclaration(SyntaxFactory.ParseName("Omni.Core"));
 
             ClassDeclarationSyntax parentClass = SyntaxFactory.ClassDeclaration(GenerateRandomName())
                 .AddModifiers(
-                    SyntaxFactory.Token(SyntaxKind.PublicKeyword),
+                    SyntaxFactory.Token(SyntaxKind.InternalKeyword),
                     SyntaxFactory.Token(SyntaxKind.StaticKeyword)
                 );
 
@@ -57,16 +52,13 @@ namespace OmniNetSourceGenerator
             var randomField = fields[_random.Next(fields.Length)];
             var fieldVariable = randomField.Declaration.Variables[0];
 
-            sb.AppendLine("namespace Omni");
+            sb.AppendLine("internal static class __O_Keys__");
             sb.AppendLine("{");
-            sb.AppendLine("    public static class __O_Keys__");
-            sb.AppendLine("    {");
-            sb.AppendLine($"        public static byte[] __Internal__Key__ => {parentClass.Identifier.Text}.{fieldVariable.Identifier.Text};");
-            sb.AppendLine("    }");
+            sb.AppendLine($"    internal static byte[] __Internal__Key__ => {parentClass.Identifier.Text}.{fieldVariable.Identifier.Text};");
             sb.AppendLine("}");
+            sb.AppendLine();
 
-            namespaceDeclaration = namespaceDeclaration.AddMembers(parentClass);
-            sb.Append(namespaceDeclaration.NormalizeWhitespace().ToString());
+            sb.Append(parentClass.NormalizeWhitespace().ToString());
             string content = sb.ToString();
 
             bool exists = File.Exists(path);
@@ -165,7 +157,7 @@ namespace OmniNetSourceGenerator
 
             return SyntaxFactory.FieldDeclaration(variableDeclaration)
                 .AddModifiers(
-                    SyntaxFactory.Token(SyntaxKind.PublicKeyword),
+                    SyntaxFactory.Token(SyntaxKind.InternalKeyword),
                     SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword),
                     SyntaxFactory.Token(SyntaxKind.StaticKeyword)
                 ).AddAttributeLists(

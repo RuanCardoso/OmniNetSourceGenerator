@@ -22,6 +22,7 @@ namespace UnityEngine.Scripting
 
 namespace UnityEngine.Scripting
 {
+	[AttributeUsage(AttributeTargets.Assembly, AllowMultiple = false, Inherited = false)]
 	public class AlwaysLinkAssembly : Attribute { }
 }
 
