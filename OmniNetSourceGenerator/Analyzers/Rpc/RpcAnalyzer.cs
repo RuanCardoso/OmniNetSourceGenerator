@@ -60,6 +60,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (context.Node is MethodDeclarationSyntax method)
             {
                 if (method.HasAttribute("Server") || method.HasAttribute("Client"))
@@ -96,12 +101,8 @@ namespace OmniNetSourceGenerator.Analyzers
                     {
                         GenHelper.ReportPartialKeywordRequirement(cContext, @class, method.Identifier.GetLocation());
 
-                        bool isNetworkBehaviour = @class.InheritsFromClass(context.SemanticModel, "NetworkBehaviour");
-                        bool isClientBehaviour = @class.InheritsFromClass(context.SemanticModel, "ClientBehaviour");
-                        bool isServerBehaviour = @class.InheritsFromClass(context.SemanticModel, "ServerBehaviour");
-                        bool isDualBehaviour = @class.InheritsFromClass(context.SemanticModel, "DualBehaviour");
-
-                        if (!isNetworkBehaviour && !isClientBehaviour && !isServerBehaviour && !isDualBehaviour)
+                        bool isNetwork = @class.InheritsFromClass(context.SemanticModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour", "DualBehaviour");
+                        if (!isNetwork)
                         {
                             GenHelper.ReportInheritanceRequirement(cContext, @class.Identifier.Text, method.Identifier.GetLocation());
                         }

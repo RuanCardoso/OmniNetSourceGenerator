@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using SourceGenerator.Extensions;
+using SourceGenerator.Helpers;
 using System.Collections.Immutable;
 
 namespace OmniNetSourceGenerator.Analyzers
@@ -50,6 +51,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (context.Node is MethodDeclarationSyntax method)
             {
                 // Check if the method is Awake or Start

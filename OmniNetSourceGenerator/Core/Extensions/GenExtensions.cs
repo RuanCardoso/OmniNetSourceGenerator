@@ -273,6 +273,12 @@ namespace SourceGenerator.Extensions
 			return baseNames.Any(x => @class.InheritsFromClass(x));
 		}
 
+		public static T GetArgumentValue<T>(this AttributeSyntax attribute, string argumentName, ArgumentIndex index, SemanticModel semanticModel, T defaultValue = default)
+		{
+			int i = (int)index;
+			return attribute.GetArgumentValue<T>(argumentName, i, semanticModel, defaultValue);
+		}
+
 		public static T GetArgumentExpression<T>(this AttributeSyntax attribute, string argumentName, ArgumentIndex index) where T : ExpressionSyntax
 		{
 			int i = (int)index;
@@ -332,6 +338,73 @@ namespace SourceGenerator.Extensions
 			catch
 			{
 				return null;
+			}
+		}
+
+		public static TResult GetArgumentValue<TResult>(this AttributeSyntax attribute, string argumentName, int argumentIndex, SemanticModel semanticModel, TResult defaultValue = default)
+		{
+			try
+			{
+				if (attribute.ArgumentList == null)
+					return defaultValue;
+
+				var arguments = attribute.ArgumentList.Arguments.ToArray();
+				if (arguments.Length == 0)
+					return defaultValue;
+
+				foreach (var argument in arguments)
+				{
+					string argName = null;
+
+					if (argument.NameColon?.Name is IdentifierNameSyntax nameColon)
+						argName = nameColon.Identifier.Text;
+
+					if (argument.NameEquals?.Name is IdentifierNameSyntax nameEquals)
+						argName = nameEquals.Identifier.Text;
+
+					if (argName != null &&
+						string.Equals(argName, argumentName, StringComparison.OrdinalIgnoreCase))
+					{
+						var expr = argument.Expression;
+						var constValue = semanticModel.GetConstantValue(expr);
+						if (constValue.HasValue)
+						{
+							if (constValue.Value is TResult val)
+								return val;
+
+							if (constValue.Value is IConvertible convertible)
+							{
+								try { return (TResult)Convert.ChangeType(convertible, typeof(TResult)); }
+								catch { return defaultValue; }
+							}
+						}
+
+						return defaultValue;
+					}
+				}
+
+				if (argumentIndex >= 0 && argumentIndex < arguments.Length)
+				{
+					var expr = arguments[argumentIndex].Expression;
+					var constValue = semanticModel.GetConstantValue(expr);
+					if (constValue.HasValue)
+					{
+						if (constValue.Value is TResult val)
+							return val;
+
+						if (constValue.Value is IConvertible convertible)
+						{
+							try { return (TResult)Convert.ChangeType(convertible, typeof(TResult)); }
+							catch { return defaultValue; }
+						}
+					}
+				}
+
+				return defaultValue;
+			}
+			catch
+			{
+				return defaultValue;
 			}
 		}
 	}

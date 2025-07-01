@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -6,7 +7,7 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using SourceGenerator.Helpers;
+using SourceGenerator.Extensions;
 
 /// <summary>
 /// Generator responsible for creating random secret keys with randomized class and variable names for key obfuscation.
@@ -29,62 +30,102 @@ namespace OmniNetSourceGenerator
         private readonly string prefixes = "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         public void Execute(GeneratorExecutionContext context)
         {
-            string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "__omni_development_keys__"
-            );
-
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("#nullable disable");
-            sb.AppendLine("#pragma warning disable");
-            sb.AppendLine("using UnityEngine.Scripting;");
-
-            ClassDeclarationSyntax parentClass = SyntaxFactory.ClassDeclaration(GenerateRandomName())
-                .AddModifiers(
-                    SyntaxFactory.Token(SyntaxKind.InternalKeyword),
-                    SyntaxFactory.Token(SyntaxKind.StaticKeyword)
-                );
-
-            for (int i = 0; i < 5; i++)
-                parentClass = parentClass.AddMembers(GenerateSecureRandomBytesField());
-
-            var fields = parentClass.Members.OfType<FieldDeclarationSyntax>().ToArray();
-            var randomField = fields[_random.Next(fields.Length)];
-            var fieldVariable = randomField.Declaration.Variables[0];
-
-            sb.AppendLine("internal static class __O_Keys__");
-            sb.AppendLine("{");
-            sb.AppendLine($"    internal static byte[] __Internal__Key__ => {parentClass.Identifier.Text}.{fieldVariable.Identifier.Text};");
-            sb.AppendLine("}");
-            sb.AppendLine();
-
-            sb.Append(parentClass.NormalizeWhitespace().ToString());
-            string content = sb.ToString();
-
-            bool exists = File.Exists(path);
-            if (!exists)
-                WriteKeysToFile(path, content);
-
-            if (exists)
+            if (context.SyntaxReceiver is KeysSyntaxReceiver receiver)
             {
-                string[] oldCode = File.ReadAllLines(path);
-                string date = oldCode[oldCode.Length - 1].Substring(3); // Skip the // and the space
-                if (DateTime.TryParse(date, out DateTime parsedDate))
+                foreach (var @class in receiver.classes)
                 {
-                    if (DateTime.UtcNow.Subtract(parsedDate).TotalMinutes < 10000d) // 10000 minutes = 7 days, the keys are valid for 7 days
+                    string assemblyPath = GetNormalizedAssemblyPath(@class.SyntaxTree.FilePath);
+                    string assemblyPathHash = GetAssemblyPathHash(assemblyPath);
+                    string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), $"{@class.Identifier.Text}_keys_generated_code_{assemblyPathHash}.ini");
+
+                    StringBuilder sbUsings = new StringBuilder();
+                    sbUsings.AppendLine("#nullable disable");
+                    sbUsings.AppendLine("#pragma warning disable");
+                    sbUsings.AppendLine("using UnityEngine.Scripting;");
+                    sbUsings.AppendLine($"// {assemblyPath} - Hash: {assemblyPathHash}");
+
+                    StringBuilder sbClass = new StringBuilder();
+                    ClassDeclarationSyntax keysClass = SyntaxFactory.ClassDeclaration(GenerateRandomName())
+                        .AddModifiers(
+                            SyntaxFactory.Token(SyntaxKind.InternalKeyword),
+                            SyntaxFactory.Token(SyntaxKind.StaticKeyword)
+                        );
+
+                    for (int i = 0; i < 10; i++)
+                        keysClass = keysClass.AddMembers(GenerateSecureRandomBytesField());
+
+                    var fields = keysClass.Members.OfType<FieldDeclarationSyntax>().ToArray();
+                    var randomField = fields[_random.Next(0, fields.Length)];
+                    var fieldVariable = randomField.Declaration.Variables[0];
+
+                    sbClass.AppendLine($"{@class.Modifiers} class {@class.Identifier.Text}");
+                    sbClass.AppendLine("{");
+                    sbClass.AppendLine($"    public const string __Internal__Key_Path__ = @\"{path}\";");
+                    sbClass.AppendLine($"    internal static byte[] __Internal__Key__ => {keysClass.Identifier.Text}.{fieldVariable.Identifier.Text};");
+                    sbClass.AppendLine("}");
+                    sbClass.AppendLine();
+                    sbClass.Append(keysClass.NormalizeWhitespace().ToString());
+
+                    var @namespace = @class.GetNamespace(out bool hasNamespace);
+                    if (hasNamespace)
                     {
-                        context.AddSource($"_keys_generated_code_.cs", string.Join("\n", oldCode));
-                        return;
+                        sbUsings.AppendLine();
+                        sbUsings.AppendLine($"namespace {@namespace.Name}");
+                        sbUsings.AppendLine("{");
+                        sbUsings.AppendLine("    " + sbClass.ToString().Replace("\n", "\n    ").TrimEnd());
+                        sbUsings.AppendLine("}");
+                    }
+                    else
+                    {
+                        sbUsings.AppendLine();
+                        sbUsings.AppendLine(sbClass.ToString());
                     }
 
-                    WriteKeysToFile(path, content);
+                    string code = sbUsings.ToString();
+                    bool exists = File.Exists(path);
+                    if (!exists)
+                    {
+                        WriteKeysToFile(path, code);
+                    }
+                    else
+                    {
+                        string[] currentCode = File.ReadAllLines(path);
+                        string date = currentCode[currentCode.Length - 1].Substring(3); // Skip the // and the space
+                        if (DateTime.TryParse(date, out DateTime parsedDate))
+                        {
+                            if (DateTime.UtcNow.Subtract(parsedDate).TotalMinutes < 10000d) // 10000 minutes = 7 days, the keys are valid for 7 days
+                            {
+                                context.AddSource($"{@class.Identifier.Text}_keys_generated_code_.cs", string.Join("\n", currentCode));
+                                return;
+                            }
+
+                            WriteKeysToFile(path, code);
+                        }
+                    }
+
+                    context.AddSource($"{@class.Identifier.Text}_keys_generated_code_.cs", code);
                 }
             }
-
-            context.AddSource($"_keys_generated_code_.cs", sb.ToString());
         }
 
-        public void Initialize(GeneratorInitializationContext context) { }
+        private string GetNormalizedAssemblyPath(string assemblyPath)
+        {
+            return assemblyPath.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+        }
+
+        private string GetAssemblyPathHash(string assemblyPath)
+        {
+            using (var md5 = MD5.Create())
+            {
+                byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(assemblyPath));
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+        }
+
+        public void Initialize(GeneratorInitializationContext context)
+        {
+            context.RegisterForSyntaxNotifications(() => new KeysSyntaxReceiver());
+        }
 
         private string GenerateRandomName()
         {
@@ -178,6 +219,18 @@ namespace OmniNetSourceGenerator
                     writer.WriteLine(content);
                     writer.WriteLine($"// {DateTime.UtcNow}");
                 }
+            }
+        }
+    }
+
+    internal class KeysSyntaxReceiver : ISyntaxReceiver
+    {
+        internal List<ClassDeclarationSyntax> classes = new List<ClassDeclarationSyntax>();
+        public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
+        {
+            if (syntaxNode is ClassDeclarationSyntax classDeclaration && classDeclaration.HasAttribute("GenerateSecureKeys"))
+            {
+                classes.Add(classDeclaration);
             }
         }
     }

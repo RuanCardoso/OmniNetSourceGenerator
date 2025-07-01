@@ -34,6 +34,15 @@ namespace OmniNetSourceGenerator.Analyzers
             isEnabledByDefault: true
         );
 
+        public static readonly DiagnosticDescriptor NonValueTypeEqualityCheckInspectorChangesWarning = new DiagnosticDescriptor(
+            id: "OMNI095",
+            title: "Performance: Reference Type Equality Check",
+            messageFormat: "The Network Variable '{0}' uses reference type equality checking. Changes made in the inspector won't be detected because equality checks compare object references, not content. Since inspector modifications alter the same object instance, equality will always return true, preventing network synchronization.",
+            category: "Performance",
+            defaultSeverity: DiagnosticSeverity.Warning,
+            isEnabledByDefault: true
+        );
+
         public static readonly DiagnosticDescriptor HighBandwidthUsageWarning = new DiagnosticDescriptor(
             id: "OMNI021",
             title: "Performance: High Bandwidth Usage",
@@ -175,6 +184,7 @@ namespace OmniNetSourceGenerator.Analyzers
             GenHelper.PartialKeywordMissing,
             NetworkVariableFieldShouldBePrivate,
             NonValueTypeEqualityCheck,
+            NonValueTypeEqualityCheckInspectorChangesWarning,
             HighBandwidthUsageWarning,
             ClientAuthorityWarning,
             RequiresOwnershipWarning,
@@ -197,6 +207,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeClassDeclaration(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (context.Node is ClassDeclarationSyntax @class)
             {
                 int booleanCount = 0;
@@ -235,6 +250,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeFieldDeclaration(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (context.Node is FieldDeclarationSyntax field)
             {
                 if (field.HasAttribute("NetworkVariable"))
@@ -279,6 +299,14 @@ namespace OmniNetSourceGenerator.Analyzers
                                     context.ReportDiagnostic(
                                         Diagnostic.Create(
                                             NonValueTypeEqualityCheck,
+                                            variable.GetLocation(),
+                                            variable.Identifier.Text
+                                        )
+                                    );
+
+                                    context.ReportDiagnostic(
+                                        Diagnostic.Create(
+                                            NonValueTypeEqualityCheckInspectorChangesWarning,
                                             variable.GetLocation(),
                                             variable.Identifier.Text
                                         )
@@ -435,10 +463,7 @@ namespace OmniNetSourceGenerator.Analyzers
                             }
                         }
 
-                        bool isNetworkBehaviour = @class.InheritsFromClass(model, "NetworkBehaviour");
-                        bool isClientBehaviour = @class.InheritsFromClass(model, "ClientBehaviour");
-                        bool isServerBehaviour = @class.InheritsFromClass(model, "ServerBehaviour");
-
+                        bool isNetwork = @class.InheritsFromClass(model, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour", "DualBehaviour");
                         foreach (var variable in field.Declaration.Variables)
                         {
                             var location = variable.GetLocation();
@@ -449,8 +474,7 @@ namespace OmniNetSourceGenerator.Analyzers
                             {
                                 if (!GenHelper.ReportInvalidFieldNamingIsUpper(cContext, fieldNameWithoutPrefix, location))
                                 {
-                                    // Note: DualBehaviour is not supported. It is a manual class that should not be used with auto-generated properties.
-                                    if (!isNetworkBehaviour && !isClientBehaviour && !isServerBehaviour)
+                                    if (!isNetwork)
                                     {
                                         GenHelper.ReportInheritanceRequirement(cContext, @class.Identifier.Text, location);
                                     }

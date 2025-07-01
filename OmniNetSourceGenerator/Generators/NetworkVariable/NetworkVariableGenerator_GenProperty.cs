@@ -17,6 +17,11 @@ namespace OmniNetSourceGenerator
 	{
 		public void Execute(GeneratorExecutionContext context)
 		{
+			if (!GenHelper.WillProcess(context.Compilation.Assembly))
+			{
+				return;
+			}
+
 			try
 			{
 				if (context.SyntaxReceiver is NetworkVariableFieldSyntaxReceiver receiver)
@@ -42,15 +47,10 @@ namespace OmniNetSourceGenerator
 								bool isNetworkBehaviour = fromClass.InheritsFromClass(classModel, "NetworkBehaviour");
 								bool isClientBehaviour = fromClass.InheritsFromClass(classModel, "ClientBehaviour");
 								bool isServerBehaviour = fromClass.InheritsFromClass(classModel, "ServerBehaviour");
-
-								// Note: DualBehaviour is not supported.
 								bool isDualBehaviour = fromClass.InheritsFromClass(classModel, "DualBehaviour");
-								if (GenHelper.ReportUnsupportedDualBehaviourUsage(context, isDualBehaviour))
-									continue;
-
-								if (isNetworkBehaviour || isClientBehaviour || isServerBehaviour)
+								if (isNetworkBehaviour || isClientBehaviour || isServerBehaviour || isDualBehaviour)
 								{
-									string baseClassName = isNetworkBehaviour ? "NetworkBehaviour" : (isClientBehaviour ? "ClientBehaviour" : isServerBehaviour ? "ServerBehaviour" : null);
+									string baseClassName = isNetworkBehaviour ? "NetworkBehaviour" : (isClientBehaviour ? "ClientBehaviour" : isServerBehaviour ? "ServerBehaviour" : isDualBehaviour ? "DualBehaviour" : null);
 									NamespaceDeclarationSyntax currentNamespace = fromClass.GetNamespace(out bool hasNamespace);
 									if (hasNamespace) currentNamespace = currentNamespace.Clear(out _);
 
@@ -77,6 +77,7 @@ namespace OmniNetSourceGenerator
 									foreach (FieldDeclarationSyntax field in @class.Members.Cast<FieldDeclarationSyntax>())
 									{
 										byte currentId = 0;
+										string hideMode = "HideMode.BackingField";
 										var attribute = field.GetAttribute("NetworkVariable");
 										if (attribute != null)
 										{
@@ -88,11 +89,17 @@ namespace OmniNetSourceGenerator
 													currentId = idValue;
 												}
 											}
+
+											var hideModeExpression = attribute.GetArgumentExpression<MemberAccessExpressionSyntax>("HideMode", ArgumentIndex.None);
+											if (hideModeExpression != null)
+											{
+												hideMode = hideModeExpression.ToString();
+											}
 										}
 
 										if (currentId <= 0)
 										{
-											int baseDepth = fromClass.GetBaseDepth(classModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour");
+											int baseDepth = fromClass.GetBaseDepth(classModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour", "DualBehaviour");
 											if (baseDepth != 0)
 											{
 												unchecked
@@ -173,7 +180,8 @@ namespace OmniNetSourceGenerator
 																					SyntaxFactory.SeparatedList(
 																						new AttributeArgumentSyntax[]
 																						{
-																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"{currentId}"))
+																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"{currentId}")),
+																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"HideMode = {hideMode}"))
 																						}
 																					)
 																				)
@@ -222,6 +230,7 @@ namespace OmniNetSourceGenerator
 																					)
 																				: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({variableName}, {currentId}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
 																				: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({variableName}, {currentId}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
+																				: baseClassName == "DualBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({variableName}, {currentId}, {variableName}Options != null ? {variableName}Options : DefaultNetworkVariableOptions);")
 																				: null
 																		)
 																	)

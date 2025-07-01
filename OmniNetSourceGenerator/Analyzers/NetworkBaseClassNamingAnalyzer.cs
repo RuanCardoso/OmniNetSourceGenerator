@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using SourceGenerator.Extensions;
+using SourceGenerator.Helpers;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -40,6 +41,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeClassDeclaration(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (!(context.Node is ClassDeclarationSyntax classDeclaration))
                 return;
 

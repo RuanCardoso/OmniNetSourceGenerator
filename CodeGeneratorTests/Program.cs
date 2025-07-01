@@ -1,69 +1,43 @@
-﻿
-#nullable disable
-
-using System;
-using System.Collections.Generic;
+﻿using System.Data.Common;
+using System.Numerics;
 using Omni.Core;
 
-public partial class DebTyBase : NetworkBehaviour
+public class Constants
 {
-
+	public const int MoveRpcId = 12;
+	public const DeliveryMode MoveRpcDeliveryMode = DeliveryMode.Unreliable;
 }
 
-public partial class PlayerBase : DebTyBase
-{
 
-}
 
-public struct Vector3
+[GenRpc($"{nameof(PlayerClient)}")]
+public partial class PlayerServer : ServerBehaviour
 {
-	public float x { get; set; }
-	public float y { get; set; }
-	public float z { get; set; }
-	public int[] array { get; set; }
-}
-
-namespace OmniNet
-{
-	[DeltaSerializable(Enabled = true)]
-	public partial struct PlayerData
+	[Server(5, SequenceChannel = 10, DeliveryMode = Constants.MoveRpcDeliveryMode)]
+	protected void Move(int vida, int calor)
 	{
-		public int vida { get; set; }
-		public Vector3 position { get; set; }
+
+	}
+}
+
+[GenerateSecureKeys]
+[GenRpc($"{nameof(PlayerServer)}")]
+public partial class PlayerClient : ClientBehaviour
+{
+	[NetworkVariable(Target = Target.All, DeliveryMode = DeliveryMode.Unreliable, ServerBroadcastsClientUpdates = true)]
+	private int m_Life2;
+
+	[NetworkVariable(Target = Target.All, DeliveryMode = DeliveryMode.Unreliable, ServerBroadcastsClientUpdates = true)]
+	private ObservableDictionary<int, int> m_Inventory;
+
+	[Client(5 + 10, SequenceChannel = 10, DeliveryMode = Constants.MoveRpcDeliveryMode)]
+	private void Move()
+	{
+
 	}
 
-
-	public partial class Player : PlayerBase
+	static void Main()
 	{
-		[NetworkVariable]
-		private int m_Vida;
 
-		[NetworkVariable]
-		private Action<int, int, List<Player>> m_OnHealthChanged;
-
-		[NetworkVariable]
-		private ObservableDictionary<int, int> m_Dictionaryy;
-
-		static void Main()
-		{
-
-		}
-
-		void Test()
-		{
-			Vida = 10;
-			// DelegateTest = null;
-			SyncVida();
-		}
-
-		// partial void OnDelegateTestChanged(Func<int> prevDelegateTest, Func<int> nextDelegateTest, bool isWriting)
-		// {
-		// 	throw new NotImplementedException();
-		// }
-
-		partial void OnVidaChanged(int prevVida, int nextVida, bool isWriting)
-		{
-			throw new NotImplementedException();
-		}
 	}
 }

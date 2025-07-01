@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -47,7 +48,7 @@ namespace SourceGenerator.Helpers
 		public static readonly DiagnosticDescriptor InheritanceConstraintViolation = new DiagnosticDescriptor(
 			id: "OMNI001",
 			title: "Missing Network Inheritance",
-			messageFormat: "The Class '{0}' must inherit from a network class (NetworkBehaviour, ServerBehaviour, or ClientBehaviour)",
+			messageFormat: "The Class '{0}' must inherit from a network class (NetworkBehaviour, ServerBehaviour, ClientBehaviour or DualBehaviour)",
 			category: "Networking",
 			defaultSeverity: DiagnosticSeverity.Error,
 			isEnabledByDefault: true,
@@ -125,30 +126,6 @@ namespace SourceGenerator.Helpers
 			return false;
 		}
 
-		public static bool ReportUnsupportedDualBehaviourUsage(GeneratorExecutionContext context, bool isDualBehaviour)
-		{
-			if (isDualBehaviour)
-			{
-				context.ReportDiagnostic(
-					Diagnostic.Create(
-						new DiagnosticDescriptor(
-							"OMNI005",
-							"Unsupported Usage of DualBehaviour",
-							"The 'DualBehaviour' class is supported only with manually created properties. Auto-generated properties are not supported. Please ensure 'DualBehaviour' is used with manually created properties.",
-							"Design",
-							DiagnosticSeverity.Error,
-							isEnabledByDefault: true
-						),
-						Location.None
-					)
-				);
-
-				return true;
-			}
-
-			return false;
-		}
-
 		/// <summary>
 		/// Creates an empty statement.
 		/// </summary>
@@ -158,6 +135,38 @@ namespace SourceGenerator.Helpers
 		public static StatementSyntax EmptyStatement()
 		{
 			return SyntaxFactory.ParseStatement("");
+		}
+
+		public static bool WillProcess(IAssemblySymbol IAssemblySymbol)
+		{
+#if DEBUG
+			return true;
+#else
+			// only works in unity engine(release)
+			// Skip Unity assemblies and assemblies that don't reference Omni.Core
+			string name = IAssemblySymbol.Name;
+			if (name.StartsWith("Omni.Components"))
+				return true;
+
+			if (name.StartsWith("Unity.") || name.StartsWith("UnityEngine.") || name.StartsWith("UnityEditor.") || name.StartsWith("Omni."))
+			{
+				return false;
+			}
+
+			// Check if the assembly references Omni.Core
+			if (!IAssemblySymbol.Modules.Any(x => x.ReferencedAssemblySymbols.Any(r => r.Name == "Omni.Core")))
+			{
+				return false;
+			}
+
+			return true;
+#endif
+		}
+
+		public static bool IsManualRpc(MethodDeclarationSyntax method)
+		{
+			var parameter = method.ParameterList.Parameters.FirstOrDefault();
+			return parameter != null && parameter.Type.ToString() == "DataBuffer";
 		}
 	}
 

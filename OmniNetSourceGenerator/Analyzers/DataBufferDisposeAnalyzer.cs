@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using SourceGenerator.Extensions;
+using SourceGenerator.Helpers;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -54,6 +55,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeInvocationExpression(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (!(context.Node is InvocationExpressionSyntax invocationExpression))
                 return;
 
@@ -85,6 +91,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeImplicitObjectCreation(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (!(context.Node is ImplicitObjectCreationExpressionSyntax implicitObjectCreation))
                 return;
 
@@ -120,6 +131,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeObjectCreation(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (!(context.Node is ObjectCreationExpressionSyntax objectCreation))
                 return;
 

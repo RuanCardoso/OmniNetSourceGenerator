@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using SourceGenerator.Extensions;
+using SourceGenerator.Helpers;
 
 namespace OmniNetSourceGenerator.Analyzers
 {
@@ -34,6 +35,11 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeClass(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+            {
+                return;
+            }
+
             if (context.Node is ClassDeclarationSyntax @class)
             {
                 var semanticModel = context.SemanticModel;
@@ -122,11 +128,9 @@ namespace OmniNetSourceGenerator.Analyzers
                     if (idExpressionConst != null)
                     {
                         var symbol = semanticModel.GetSymbolInfo(idExpressionConst).Symbol;
-                        if (symbol is IFieldSymbol fieldSymbol &&
-                            fieldSymbol.HasConstantValue &&
-                            fieldSymbol.ConstantValue is byte constantValue)
+                        if (symbol is IFieldSymbol fieldSymbol && fieldSymbol.HasConstantValue)
                         {
-                            id = constantValue;
+                            id = byte.Parse(fieldSymbol.ConstantValue.ToString());
                             return true;
                         }
                     }

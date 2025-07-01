@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using SourceGenerator.Extensions;
+using SourceGenerator.Helpers;
 
 namespace OmniNetSourceGenerator.Analyzers
 {
@@ -44,17 +45,25 @@ namespace OmniNetSourceGenerator.Analyzers
 
         private void AnalyzeMethod(SyntaxNodeAnalysisContext context)
         {
+            if (!GenHelper.WillProcess(context.Compilation.Assembly))
+                return;
+
             if (context.Node is MethodDeclarationSyntax method)
             {
                 bool isClientRpc = method.HasAttribute("Client");
                 bool isServerRpc = method.HasAttribute("Server");
 
-                if (!isClientRpc && !isServerRpc) return;
+                if (!isClientRpc && !isServerRpc)
+                    return;
 
                 if (!IsValidSignature(method, context.SemanticModel, isClientRpc))
                 {
                     string rpcType = isClientRpc ? "Client" : "Server";
                     string validSignatures = isClientRpc ? ClientValidSignatures : ServerValidSignatures;
+
+                    bool isAutoRpc = !GenHelper.IsManualRpc(method);
+                    if (isAutoRpc)
+                        return;
 
                     context.ReportDiagnostic(
                         Diagnostic.Create(
