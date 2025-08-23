@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace OmniNetSourceGenerator
 {
@@ -55,6 +56,9 @@ namespace OmniNetSourceGenerator
                                 var methodBody = new StringBuilder();
                                 methodBody.AppendLine("if (false) {"); // Ensure the code is never executed
 
+                                HashSet<byte> clientIds = new HashSet<byte>();
+                                HashSet<byte> serverIds = new HashSet<byte>();
+
                                 string classname = fromClass.GetAttribute("GenRpc")?.GetArgumentValue<string>("classname", ArgumentIndex.First, classModel, null) ?? null;
                                 foreach (MethodDeclarationSyntax method in @class.Members.Cast<MethodDeclarationSyntax>())
                                 {
@@ -67,14 +71,49 @@ namespace OmniNetSourceGenerator
                                     string methodName = method.Identifier.Text;
                                     var parameters = method.ParameterList.Parameters;
                                     methodBody.AppendLine($"{methodName}({string.Join(", ", Enumerable.Repeat("default", parameters.Count))});");
-                                    var attribute = method.GetAttribute(isClientRpc ? "Client" : "Server");
+
+                                    // Generate auto id to the RPC if not specified..
+                                    AttributeSyntax attribute = method.GetAttribute(isClientRpc ? "Client" : "Server");
+                                    byte currentId = attribute.GetArgumentValue<byte>("id", ArgumentIndex.First, classModel);
+                                    if (currentId <= 0)
+                                    {
+                                        int baseDepth = fromClass.GetBaseDepth(classModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour", "DualBehaviour");
+                                        if (baseDepth != 0)
+                                        {
+                                            unchecked
+                                            {
+                                                currentId = (byte)(255 - (255 / baseDepth));
+                                            }
+                                        }
+                                    }
+
+                                    var uniqueIds = isServerRpc ? serverIds : clientIds;
+                                    if (currentId <= 0)
+                                    {
+                                        currentId++;
+                                        while (uniqueIds.Contains(currentId))
+                                            currentId++;
+                                    }
+
+                                    uniqueIds.Add(currentId);
                                     if (!GenHelper.IsManualRpc(method))
                                     {
-                                        memberList.Add(GenerateRpcMethod(method, attribute));
+                                        memberList.Add(GenerateRpcMethod(method, attribute, currentId));
                                         bool requiresPeer = isDualBehaviour || isClientBehaviour || isServerBehaviour;
-                                        var member = GenerateDirectRpcMethod(method, attribute.GetArgumentValue<byte>("id", ArgumentIndex.First, classModel), isServerRpc, requiresPeer: requiresPeer);
-                                        if (classname != null) relatedMemberList.Add(member);
-                                        else memberList.Add(member);
+                                        var directRpc = GenerateDirectRpcMethod(method, currentId, isServerRpc, requiresPeer: requiresPeer);
+                                        var directPeerRpc = GenerateDirectPeerRpcMethod(method, currentId);
+                                        if (classname != null)
+                                        {
+                                            relatedMemberList.Add(directRpc);
+                                            if (isNetworkBehaviour && isClientRpc)
+                                                relatedMemberList.Add(directPeerRpc);
+                                        }
+                                        else
+                                        {
+                                            memberList.Add(directRpc);
+                                            if (isNetworkBehaviour && isClientRpc)
+                                                memberList.Add(directPeerRpc);
+                                        }
                                     }
                                 }
 
@@ -82,30 +121,30 @@ namespace OmniNetSourceGenerator
 
                                 // Create the dummy method
                                 memberList.Add(
-                                    SyntaxFactory.MethodDeclaration(
-                                        SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
+                                    MethodDeclaration(
+                                        PredefinedType(Token(SyntaxKind.VoidKeyword)),
                                         "PreventRpcStripping"
                                     )
                                     .WithModifiers(
-                                        SyntaxFactory.TokenList(
+                                        TokenList(
                                             new[]{
-                                                SyntaxFactory.Token(SyntaxKind.PrivateKeyword),
+                                                Token(SyntaxKind.PrivateKeyword),
                                             }
                                         )
                                     )
                                     .WithAttributeLists(
-                                        SyntaxFactory.SingletonList(
-                                            SyntaxFactory.AttributeList(
-                                               SyntaxFactory.SeparatedList(
+                                        SingletonList(
+                                            AttributeList(
+                                               SeparatedList(
                                                     new AttributeSyntax[] {
-                                                       SyntaxFactory.Attribute(SyntaxFactory.ParseName("Preserve")),
-                                                       SyntaxFactory.Attribute(SyntaxFactory.ParseName("EditorBrowsable"), SyntaxFactory.ParseAttributeArgumentList("(EditorBrowsableState.Never)"))
+                                                       Attribute(ParseName("Preserve")),
+                                                       Attribute(ParseName("EditorBrowsable"), ParseAttributeArgumentList("(EditorBrowsableState.Never)"))
                                                   }
                                                )
                                             )
                                         )
                                     )
-                                    .WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement(methodBody.ToString())))
+                                    .WithBody(Block(ParseStatement(methodBody.ToString())))
                                 );
 
                                 parentClass = parentClass.AddMembers(memberList.ToArray());
@@ -113,7 +152,7 @@ namespace OmniNetSourceGenerator
                                 ClassDeclarationSyntax relatedClass = null;
                                 if (classname != null)
                                 {
-                                    relatedClass = SyntaxFactory.ClassDeclaration(classname).WithModifiers(fromClass.Modifiers);
+                                    relatedClass = ClassDeclaration(classname).WithModifiers(fromClass.Modifiers);
                                     relatedClass = relatedClass.AddMembers(relatedMemberList.ToArray());
                                 }
 
@@ -142,7 +181,7 @@ namespace OmniNetSourceGenerator
                                     sb.Append(currentNamespace.NormalizeWhitespace().ToString());
                                 }
 
-                                context.AddSource($"{parentClass.Identifier.Text}_rpc_usage_generated_code_.cs", sb.ToString());
+                                context.AddSource($"{parentClass.Identifier.Text}_rpc_usage_generated_code_.cs", Source.Clean(sb.ToString()));
                             }
                             else
                             {
@@ -170,6 +209,82 @@ namespace OmniNetSourceGenerator
             }
         }
 
+        private MethodDeclarationSyntax GenerateDirectPeerRpcMethod(MethodDeclarationSyntax method, byte rpcId)
+        {
+            var originalParams = method.ParameterList.Parameters
+                .Where(p =>
+                    p.Type.ToString() != "NetworkPeer" &&
+                    p.Type.ToString() != "Channel"
+                )
+                .ToList();
+
+            var extraParams = new List<ParameterSyntax>
+            {
+                Parameter(Identifier("peer"))
+                    .WithType(ParseTypeName("NetworkPeer")),
+                Parameter(Identifier("group"))
+                    .WithType(ParseTypeName("NetworkGroup"))
+                    .WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.NullLiteralExpression))),
+                Parameter(Identifier("target"))
+                    .WithType(ParseTypeName("Target"))
+                    .WithDefault(EqualsValueClause(ParseExpression("Target.Auto"))),
+                Parameter(Identifier("mode"))
+                    .WithType(ParseTypeName("DeliveryMode"))
+                    .WithDefault(EqualsValueClause(ParseExpression("DeliveryMode.ReliableOrdered"))),
+                Parameter(Identifier("channel"))
+                    .WithType(ParseTypeName("int"))
+                    .WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(0))))
+            };
+
+            var allParams = originalParams.Concat(extraParams);
+            var methodName = $"{method.Identifier.Text}Rpc";
+
+            // Create argument list for the RPC call
+            var arguments = new List<ArgumentSyntax>
+            {
+                Argument(LiteralExpression(
+                    SyntaxKind.NumericLiteralExpression,
+                    Literal(rpcId))),
+                Argument(IdentifierName("peer")),
+                Argument(originalParams.Count > 0 ? IdentifierName("_buffer_") : IdentifierName("DataBuffer.Empty")),
+                Argument(IdentifierName("group"))
+            };
+
+            var rpcCall = ExpressionStatement(
+                InvocationExpression(
+                    MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        IdentifierName("Server"),
+                        IdentifierName("RpcViaPeer")
+                    ),
+                    ArgumentList(SeparatedList(arguments))
+                )
+            );
+
+            var CallRpcParameters = ParseStatement($"Server.SetRpcParameters({rpcId}, mode, target, channel);");
+            List<StatementSyntax> body = new List<StatementSyntax>
+            {
+                CallRpcParameters,
+            };
+
+            if (originalParams.Count > 0)
+                body.Add(ParseStatement("using var _buffer_ = NetworkManager.Pool.Rent(enableTracking: false);"));
+
+            foreach (var parameter in originalParams)
+                body.Add(ParseStatement($"_buffer_.WriteAsBinary<{parameter.Type}>({parameter.Identifier.Text});"));
+
+            body.Add(rpcCall);
+            return MethodDeclaration(
+                    PredefinedType(Token(SyntaxKind.VoidKeyword)),
+                    methodName
+                )
+                .WithModifiers(TokenList(new[] { Token(SyntaxKind.PrivateKeyword) }))
+                .WithParameterList(
+                    ParameterList(SeparatedList(allParams))
+                )
+                .WithBody(Block(body));
+        }
+
         private MethodDeclarationSyntax GenerateDirectRpcMethod(MethodDeclarationSyntax method, byte rpcId, bool isServerRpc, bool requiresPeer)
         {
             var originalParams = method.ParameterList.Parameters
@@ -184,34 +299,34 @@ namespace OmniNetSourceGenerator
             if (requiresPeer && !isServerRpc)
             {
                 extraParams.Add(
-                    SyntaxFactory.Parameter(SyntaxFactory.Identifier("peer"))
-                        .WithType(SyntaxFactory.ParseTypeName("NetworkPeer"))
+                    Parameter(Identifier("peer"))
+                        .WithType(ParseTypeName("NetworkPeer"))
                 );
             }
 
             if (!isServerRpc)
             {
                 extraParams.Add(
-                    SyntaxFactory.Parameter(SyntaxFactory.Identifier("group"))
-                        .WithType(SyntaxFactory.ParseTypeName("NetworkGroup"))
-                        .WithDefault(SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression)))
+                    Parameter(Identifier("group"))
+                        .WithType(ParseTypeName("NetworkGroup"))
+                        .WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.NullLiteralExpression)))
                 );
                 extraParams.Add(
-                    SyntaxFactory.Parameter(SyntaxFactory.Identifier("target"))
-                        .WithType(SyntaxFactory.ParseTypeName("Target"))
-                        .WithDefault(SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseExpression("Target.Auto")))
+                    Parameter(Identifier("target"))
+                        .WithType(ParseTypeName("Target"))
+                        .WithDefault(EqualsValueClause(ParseExpression("Target.Auto")))
                 );
             }
 
             extraParams.Add(
-                SyntaxFactory.Parameter(SyntaxFactory.Identifier("mode"))
-                    .WithType(SyntaxFactory.ParseTypeName("DeliveryMode"))
-                    .WithDefault(SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseExpression("DeliveryMode.ReliableOrdered")))
+                Parameter(Identifier("mode"))
+                    .WithType(ParseTypeName("DeliveryMode"))
+                    .WithDefault(EqualsValueClause(ParseExpression("DeliveryMode.ReliableOrdered")))
             );
             extraParams.Add(
-                SyntaxFactory.Parameter(SyntaxFactory.Identifier("channel"))
-                    .WithType(SyntaxFactory.ParseTypeName("int"))
-                    .WithDefault(SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(0))))
+                Parameter(Identifier("channel"))
+                    .WithType(ParseTypeName("int"))
+                    .WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(0))))
             );
 
             if (isServerRpc)
@@ -224,46 +339,47 @@ namespace OmniNetSourceGenerator
             // Create argument list for the RPC call
             var arguments = new List<ArgumentSyntax>
             {
-                SyntaxFactory.Argument(SyntaxFactory.LiteralExpression(
+                Argument(LiteralExpression(
                     SyntaxKind.NumericLiteralExpression,
-                    SyntaxFactory.Literal(rpcId)))
+                    Literal(rpcId)))
             };
 
             if (requiresPeer && !isServerRpc)
-                arguments.Add(SyntaxFactory.Argument(SyntaxFactory.IdentifierName("peer")));
+                arguments.Add(Argument(IdentifierName("peer")));
 
             arguments.AddRange(originalParams.Select(p =>
-                SyntaxFactory.Argument(SyntaxFactory.IdentifierName(p.Identifier.Text))));
+                Argument(IdentifierName(p.Identifier.Text))));
 
             if (!isServerRpc)
             {
-                arguments.Add(SyntaxFactory.Argument(SyntaxFactory.IdentifierName("group: group")));
+                arguments.Add(Argument(IdentifierName("group: group")));
             }
 
-            var rpcCall = SyntaxFactory.ExpressionStatement(
-                SyntaxFactory.InvocationExpression(
-                    SyntaxFactory.MemberAccessExpression(
+            var rpcCall = ExpressionStatement(
+                InvocationExpression(
+                    MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName(isServerRpc ? "Client" : "Server"),
-                        SyntaxFactory.IdentifierName("Rpc")
+                        IdentifierName(isServerRpc ? "Client" : "Server"),
+                        IdentifierName("Rpc")
                     ),
-                    SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(arguments))
+                    ArgumentList(SeparatedList(arguments))
                 )
             );
 
-            var CallRpcParameters = !isServerRpc ? SyntaxFactory.ParseStatement($"Server.SetRpcParameters({rpcId}, mode, target, channel);") : SyntaxFactory.ParseStatement($"Client.SetRpcParameters({rpcId}, mode, channel);");
-            return SyntaxFactory.MethodDeclaration(
-                    SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
+            var CallRpcParameters = !isServerRpc ? ParseStatement($"Server.SetRpcParameters({rpcId}, mode, target, channel);") : ParseStatement($"Client.SetRpcParameters({rpcId}, mode, channel);");
+            return MethodDeclaration(
+                    PredefinedType(Token(SyntaxKind.VoidKeyword)),
                     methodName
                 )
-                .WithModifiers(SyntaxFactory.TokenList(new[] { SyntaxFactory.Token(SyntaxKind.PrivateKeyword) }))
+                .WithModifiers(TokenList(new[] { Token(SyntaxKind.PrivateKeyword) }))
                 .WithParameterList(
-                    SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(allParams))
+                    ParameterList(SeparatedList(allParams))
                 )
-                .WithBody(SyntaxFactory.Block(new[] { CallRpcParameters, rpcCall }));
+                .WithBody(Block(new[] { CallRpcParameters, rpcCall }));
         }
 
-        private MethodDeclarationSyntax GenerateRpcMethod(MethodDeclarationSyntax method, AttributeSyntax attribute)
+        // read
+        private MethodDeclarationSyntax GenerateRpcMethod(MethodDeclarationSyntax method, AttributeSyntax attribute, byte id)
         {
             var statements = new List<StatementSyntax>();
             var methodParameters = method.ParameterList.Parameters;
@@ -279,40 +395,61 @@ namespace OmniNetSourceGenerator
                 if (paramType == "NetworkPeer") statement = $"{paramType} {paramName} = peer;";
                 else if (paramType == "Channel") statement = $"{paramType} {paramName} = seqChannel;";
 
-                statements.Add(SyntaxFactory.ParseStatement(statement));
-                methodArguments.Add(SyntaxFactory.Argument(SyntaxFactory.IdentifierName(paramName)));
+                statements.Add(ParseStatement(statement));
+                methodArguments.Add(Argument(IdentifierName(paramName)));
             }
 
-            statements.Add(SyntaxFactory.ExpressionStatement(
-                SyntaxFactory.InvocationExpression(
-                    SyntaxFactory.IdentifierName(method.Identifier.ToString()),
-                    SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(methodArguments))
+            statements.Add(ExpressionStatement(
+                InvocationExpression(
+                    IdentifierName(method.Identifier.ToString()),
+                    ArgumentList(SeparatedList(methodArguments))
                 )
             ));
 
-            return SyntaxFactory.MethodDeclaration(method.ReturnType, SyntaxFactory.Identifier("__" + method.Identifier.Text))
-            .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
-            .WithAttributeLists(method.AttributeLists)
-            .WithParameterList(SyntaxFactory.ParameterList(
-                SyntaxFactory.SeparatedList(
+            return MethodDeclaration(method.ReturnType, Identifier("__" + method.Identifier.Text))
+            .WithModifiers(TokenList(Token(SyntaxKind.PrivateKeyword)))
+            .WithAttributeLists(
+            SingletonList(
+                AttributeList(
+                    SingletonSeparatedList(
+                        Attribute(attribute.Name)
+                        .WithArgumentList(
+                            AttributeArgumentList(
+                                SingletonSeparatedList(
+                                    AttributeArgument(
+                                        LiteralExpression(
+                                            SyntaxKind.NumericLiteralExpression,
+                                            Literal(id))))))))))
+            .AddAttributeLists(
+                AttributeList(
+                   SeparatedList(
+                        new AttributeSyntax[] {
+                           Attribute(ParseName("Preserve")),
+                           Attribute(ParseName("EditorBrowsable"), ParseAttributeArgumentList("(EditorBrowsableState.Never)"))
+                      }
+                   )
+                )
+            )
+            .WithParameterList(ParameterList(
+                SeparatedList(
                     attribute.Name.ToString() == "Server"
                         ? new[] {
-                                SyntaxFactory.Parameter(SyntaxFactory.Identifier("message"))
-                                    .WithType(SyntaxFactory.ParseTypeName("DataBuffer")),
-                                SyntaxFactory.Parameter(SyntaxFactory.Identifier("peer"))
-                                    .WithType(SyntaxFactory.ParseTypeName("NetworkPeer")),
-                                SyntaxFactory.Parameter(SyntaxFactory.Identifier("seqChannel"))
-                                    .WithType(SyntaxFactory.ParseTypeName("int"))
+                                Parameter(Identifier("message"))
+                                    .WithType(ParseTypeName("DataBuffer")),
+                                Parameter(Identifier("peer"))
+                                    .WithType(ParseTypeName("NetworkPeer")),
+                                Parameter(Identifier("seqChannel"))
+                                    .WithType(ParseTypeName("int"))
                         }
                         : new[] {
-                                SyntaxFactory.Parameter(SyntaxFactory.Identifier("message"))
-                                    .WithType(SyntaxFactory.ParseTypeName("DataBuffer")),
-                                SyntaxFactory.Parameter(SyntaxFactory.Identifier("seqChannel"))
-                                    .WithType(SyntaxFactory.ParseTypeName("int"))
+                                Parameter(Identifier("message"))
+                                    .WithType(ParseTypeName("DataBuffer")),
+                                Parameter(Identifier("seqChannel"))
+                                    .WithType(ParseTypeName("int"))
                         }
                 )
             ))
-            .WithBody(SyntaxFactory.Block(statements));
+            .WithBody(Block(statements));
         }
 
         public void Initialize(GeneratorInitializationContext context)

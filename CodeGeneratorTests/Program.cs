@@ -1,6 +1,10 @@
-﻿using System.Data.Common;
+﻿using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Drawing;
 using System.Numerics;
 using Omni.Core;
+using TestA;
 
 public class Constants
 {
@@ -8,36 +12,82 @@ public class Constants
 	public const DeliveryMode MoveRpcDeliveryMode = DeliveryMode.Unreliable;
 }
 
-
-
-[GenRpc($"{nameof(PlayerClient)}")]
-public partial class PlayerServer : ServerBehaviour
+namespace TestA
 {
-	[Server(5, SequenceChannel = 10, DeliveryMode = Constants.MoveRpcDeliveryMode)]
-	protected void Move(int vida, int calor)
+	public partial class PlayerServer : NetworkBehaviour
 	{
 
 	}
 }
 
-[GenerateSecureKeys]
-[GenRpc($"{nameof(PlayerServer)}")]
-public partial class PlayerClient : ClientBehaviour
+namespace TestA
 {
-	[NetworkVariable(Target = Target.All, DeliveryMode = DeliveryMode.Unreliable, ServerBroadcastsClientUpdates = true)]
-	private int m_Life2;
 
-	[NetworkVariable(Target = Target.All, DeliveryMode = DeliveryMode.Unreliable, ServerBroadcastsClientUpdates = true)]
-	private ObservableDictionary<int, int> m_Inventory;
+#pragma warning disable OMNI095
+	[GenRpc("PlayerServer")]
 
-	[Client(5 + 10, SequenceChannel = 10, DeliveryMode = Constants.MoveRpcDeliveryMode)]
-	private void Move()
+	public partial class PlayerClient : NetworkBehaviour
 	{
 
-	}
+		const byte IdVar = 215;
 
-	static void Main()
-	{
+#if DEBUG
+#else
+#endif
+
+		[NetworkVariable(ServerBroadcastsClientUpdates = true, SequenceChannel = 14, Target = Target.GroupOthers)]
+		private int m_Vida = 100;
+
+
+#if DEBUG
+		#region RPC
+		#endregion
+
+		[Client]
+		void Test()
+		{
+
+		}
+
+		[Server(1)]
+		void Test2()
+		{
+
+		}
+
+		[Server(2)]
+		void Test24()
+		{
+
+		}
+
+		[Server]
+		void Test3()
+		{
+		}
+
+#if DEBUG
+
+
+		static void Main()
+		{
+
+		}
+#endif
+#endif
+
+#if DEBUG
+
+
+#endif
+
+
+
+#if DEBUG
+#elif DEBUG
+#else
+
+#endif
 
 	}
 }

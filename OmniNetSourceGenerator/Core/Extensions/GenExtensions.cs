@@ -177,19 +177,27 @@ namespace SourceGenerator.Extensions
 		public static ClassDeclarationSyntax Clear(this ClassDeclarationSyntax @class, out ClassDeclarationSyntax fromClass)
 		{
 			fromClass = @class;
-			return @class.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>()).WithAttributeLists(SyntaxFactory.List<AttributeListSyntax>());
+			return @class.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>()).
+				WithAttributeLists(SyntaxFactory.List<AttributeListSyntax>()).
+				WithoutLeadingTrivia().
+				WithoutTrailingTrivia();
 		}
 
 		public static StructDeclarationSyntax Clear(this StructDeclarationSyntax @struct, out StructDeclarationSyntax fromStruct)
 		{
 			fromStruct = @struct;
-			return @struct.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>()).WithAttributeLists(SyntaxFactory.List<AttributeListSyntax>());
+			return @struct.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>()).
+				WithAttributeLists(SyntaxFactory.List<AttributeListSyntax>()).
+				WithoutLeadingTrivia().
+				WithoutTrailingTrivia();
 		}
 
 		public static NamespaceDeclarationSyntax Clear(this NamespaceDeclarationSyntax @namespace, out NamespaceDeclarationSyntax fromNamespace)
 		{
 			fromNamespace = @namespace;
-			return @namespace.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>());
+			return @namespace.WithMembers(SyntaxFactory.List<MemberDeclarationSyntax>()).
+				WithoutLeadingTrivia().
+				WithoutTrailingTrivia();
 		}
 
 		public static int GetBaseDepth(this ClassDeclarationSyntax @class, SemanticModel semanticModel, params string[] rootBases)
@@ -279,68 +287,6 @@ namespace SourceGenerator.Extensions
 			return attribute.GetArgumentValue<T>(argumentName, i, semanticModel, defaultValue);
 		}
 
-		public static T GetArgumentExpression<T>(this AttributeSyntax attribute, string argumentName, ArgumentIndex index) where T : ExpressionSyntax
-		{
-			int i = (int)index;
-			return attribute.GetArgumentExpression<T>(argumentName, i);
-		}
-
-		/// <summary>
-		/// Retrieves an argument expression from the specified attribute and returns it cast to the specified type <typeparamref name="T"/>.
-		/// The search is performed by first matching a named argument (<paramref name="argumentName"/>) and, if not found,
-		/// by using the argument at the specified <paramref name="argumentIndex"/>.
-		/// </summary>
-		/// <typeparam name="T">The type of the expression to retrieve, which must be a subclass of <see cref="Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax"/>.</typeparam>
-		/// <param name="attribute">The attribute syntax from which to extract the argument expression.</param>
-		/// <param name="argumentName">The name of the argument to look for in the attribute's argument list.</param>
-		/// <param name="argumentIndex">The index of the argument to fetch if a named argument match is not found.</param>
-		/// <returns>
-		/// The argument expression cast to type <typeparamref name="T"/>, or <c>null</c> if the argument is not found,
-		/// not of the expected type, or if an exception occurs during the extraction process.
-		/// </returns>
-		public static T GetArgumentExpression<T>(this AttributeSyntax attribute, string argumentName, int argumentIndex) where T : ExpressionSyntax
-		{
-			try
-			{
-				if (attribute.ArgumentList == null)
-					return null;
-
-				var arguments = attribute.ArgumentList.Arguments.ToArray();
-				if (arguments.Length == 0)
-					return null;
-
-				foreach (var argument in arguments)
-				{
-					if (argument.NameColon?.Name is IdentifierNameSyntax nameColon &&
-						string.Equals(nameColon.Identifier.Text, argumentName, StringComparison.OrdinalIgnoreCase))
-					{
-						return argument.Expression as T;
-					}
-
-					if (argument.NameEquals?.Name is IdentifierNameSyntax nameEquals &&
-						string.Equals(nameEquals.Identifier.Text, argumentName, StringComparison.OrdinalIgnoreCase))
-					{
-						return argument.Expression as T;
-					}
-				}
-
-				if (argumentIndex >= 0 && argumentIndex < arguments.Length)
-				{
-					var indexedArgument = arguments[argumentIndex].Expression;
-					if (indexedArgument is T typedArgument)
-					{
-						return typedArgument;
-					}
-				}
-
-				return null;
-			}
-			catch
-			{
-				return null;
-			}
-		}
-
 		public static TResult GetArgumentValue<TResult>(this AttributeSyntax attribute, string argumentName, int argumentIndex, SemanticModel semanticModel, TResult defaultValue = default)
 		{
 			try
@@ -369,6 +315,12 @@ namespace SourceGenerator.Extensions
 						var constValue = semanticModel.GetConstantValue(expr);
 						if (constValue.HasValue)
 						{
+							if (typeof(TResult).IsEnum)
+							{
+								try { return (TResult)Enum.ToObject(typeof(TResult), constValue.Value); }
+								catch { return defaultValue; }
+							}
+
 							if (constValue.Value is TResult val)
 								return val;
 

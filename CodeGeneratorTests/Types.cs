@@ -40,10 +40,57 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue> where
 
 public enum Target
 {
+	/// <summary>
+	/// Automatically selects the most appropriate recipients for the network message based on the current context.
+	/// <para>
+	/// On the server, this typically means broadcasting to all relevant clients. On the client, it may target the server or a specific group,
+	/// depending on the operation being performed. This is the default and recommended option for most use cases.
+	/// </para>
+	/// </summary>
 	Auto,
-	Server,
-	Client,
-	All
+
+	/// <summary>
+	/// Sends the message to all connected peers, including the sender itself.
+	/// <para>
+	/// Use this to broadcast updates or events that should be visible to every participant in the session, including the originator.
+	/// </para>
+	/// </summary>
+	Everyone,
+
+	/// <summary>
+	/// Sends the message exclusively to the sender (the local peer).
+	/// <para>
+	/// This option is typically used for providing immediate feedback, confirmations, or updates that are only relevant to the sender and should not be visible to other peers.
+	/// </para>
+	/// <para>
+	/// <b>Note:</b> If the sender is the server (peer id: 0), the message will be ignored and not processed. This ensures that server-only operations do not result in unnecessary or redundant network traffic.
+	/// </para>
+	/// </summary>
+	Self,
+
+	/// <summary>
+	/// Sends the message to all connected peers except the sender.
+	/// <para>
+	/// Use this to broadcast information to all participants while excluding the originator, such as when relaying a player's action to others.
+	/// </para>
+	/// </summary>
+	Others,
+
+	/// <summary>
+	/// Sends the message to all peers who are members of the same group(s) as the sender.
+	/// <para>
+	/// Sub-groups are not included. This is useful for group-based communication, such as team chat or localized events.
+	/// </para>
+	/// </summary>
+	Group,
+
+	/// <summary>
+	/// Sends the message to all peers in the same group(s) as the sender, excluding the sender itself.
+	/// <para>
+	/// Sub-groups are not included. Use this to notify group members of an action performed by the sender, without echoing it back.
+	/// </para>
+	/// </summary>
+	GroupOthers,
 }
 
 public class NetworkGroup
@@ -78,6 +125,7 @@ public class DataBuffer : IDisposable
 	public DataBuffer() { }
 
 	public int Length { get; set; }
+	public static DataBuffer Empty;
 
 	public static DataBuffer Rent()
 	{
@@ -397,7 +445,7 @@ namespace Omni.Core
 
 public class NetPool()
 {
-	public DataBuffer Rent()
+	public DataBuffer Rent(bool enableTracking)
 	{
 		return default;
 	}
@@ -771,6 +819,15 @@ namespace Omni.Core
 
 		}
 
+		public void RpcViaPeer(byte rpcId, NetworkPeer peer, DataBuffer message = null, NetworkGroup group = null)
+		{
+
+		}
+
+		public void Rpc(byte rpcId, DataBuffer buffer = null, NetworkGroup group = null)
+		{
+		}
+
 		public void Rpc<T1>(byte rpcId, T1 p1, NetworkGroup group = null)
 		{
 		}
@@ -951,6 +1008,11 @@ namespace Omni.Core
 		{
 
 		}
+
+		public void Rpc(byte rpcId, NetworkPeer peer, DataBuffer buffer = null, NetworkGroup group = null)
+		{
+		}
+
 
 		public void Rpc<T1>(byte rpcId, NetworkPeer peer, T1 p1, NetworkGroup group = null)
 		{

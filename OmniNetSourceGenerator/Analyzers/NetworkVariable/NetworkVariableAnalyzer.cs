@@ -16,7 +16,7 @@ namespace OmniNetSourceGenerator.Analyzers
         public static readonly DiagnosticDescriptor NetworkVariableFieldShouldBePrivate = new DiagnosticDescriptor(
             id: "OMNI018",
             title: "Network Variable Field Should Be Private",
-            messageFormat: "The Network Variable '{0}' should be private as it is exposed through a generated public property",
+            messageFormat: "The Network Variable '{0}' should be private or protected as it is exposed through a generated public property",
             category: "Design",
             defaultSeverity: DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
@@ -28,7 +28,8 @@ namespace OmniNetSourceGenerator.Analyzers
         public static readonly DiagnosticDescriptor NonValueTypeEqualityCheck = new DiagnosticDescriptor(
             id: "OMNI020",
             title: "Performance: Reference Type Equality Check",
-            messageFormat: "The Network Variable '{0}' has 'CheckEquality' enabled which may impact performance for reference types. Disable it if not needed.",
+            messageFormat: "The Network Variable '{0}' has 'CheckEquality' enabled. For reference types this may introduce extra performance cost and will only detect changes when a different instance is assigned. "
+                 + "If the same instance is reused, updates will not be synchronized.",
             category: "Performance",
             defaultSeverity: DiagnosticSeverity.Info,
             isEnabledByDefault: true
@@ -263,7 +264,7 @@ namespace OmniNetSourceGenerator.Analyzers
                     if (field.Parent is ClassDeclarationSyntax @class)
                     {
                         GenHelper.ReportPartialKeywordRequirement(cContext, @class, field.GetLocation());
-                        if (!field.HasModifier(SyntaxKind.PrivateKeyword))
+                        if (!field.HasModifier(SyntaxKind.PrivateKeyword) && !field.HasModifier(SyntaxKind.ProtectedKeyword))
                         {
                             foreach (var variable in field.Declaration.Variables)
                             {
@@ -314,51 +315,36 @@ namespace OmniNetSourceGenerator.Analyzers
                                 }
                             }
 
-                            bool requiresOwnership = true;
-                            bool isClientAuthority = false;
-
                             AttributeSyntax attribute = field.GetAttribute("NetworkVariable");
                             if (attribute != null)
                             {
-                                var requiresOwnershipExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("RequiresOwnership", ArgumentIndex.None);
-                                if (requiresOwnershipExpression != null)
+                                var requiresOwnership = attribute.GetArgumentValue<bool>("RequiresOwnership", ArgumentIndex.None, model, defaultValue: true);
+                                if (!requiresOwnership)
                                 {
-                                    if (bool.TryParse(requiresOwnershipExpression.Token.ValueText, out requiresOwnership))
+                                    foreach (var variable in field.Declaration.Variables)
                                     {
-                                        if (!requiresOwnership)
-                                        {
-                                            foreach (var variable in field.Declaration.Variables)
-                                            {
-                                                context.ReportDiagnostic(
-                                                    Diagnostic.Create(
-                                                        RequiresOwnershipWarning,
-                                                        variable.GetLocation(),
-                                                        variable.Identifier.Text
-                                                    )
-                                                );
-                                            }
-                                        }
+                                        context.ReportDiagnostic(
+                                            Diagnostic.Create(
+                                                RequiresOwnershipWarning,
+                                                variable.GetLocation(),
+                                                variable.Identifier.Text
+                                            )
+                                        );
                                     }
                                 }
 
-                                var isClientAuthorityExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("IsClientAuthority", ArgumentIndex.None);
-                                if (isClientAuthorityExpression != null)
+                                var isClientAuthority = attribute.GetArgumentValue<bool>("IsClientAuthority", ArgumentIndex.None, model, defaultValue: false);
+                                if (isClientAuthority)
                                 {
-                                    if (bool.TryParse(isClientAuthorityExpression.Token.ValueText, out isClientAuthority))
+                                    foreach (var variable in field.Declaration.Variables)
                                     {
-                                        if (isClientAuthority)
-                                        {
-                                            foreach (var variable in field.Declaration.Variables)
-                                            {
-                                                context.ReportDiagnostic(
-                                                    Diagnostic.Create(
-                                                        ClientAuthorityWarning,
-                                                        variable.GetLocation(),
-                                                        variable.Identifier.Text
-                                                    )
-                                                );
-                                            }
-                                        }
+                                        context.ReportDiagnostic(
+                                            Diagnostic.Create(
+                                                ClientAuthorityWarning,
+                                                variable.GetLocation(),
+                                                variable.Identifier.Text
+                                            )
+                                        );
                                     }
                                 }
 
@@ -376,41 +362,28 @@ namespace OmniNetSourceGenerator.Analyzers
                                     }
                                 }
 
-                                var equalExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("CheckEquality", ArgumentIndex.None);
-                                if (equalExpression != null)
+                                var isEquality = attribute.GetArgumentValue<bool>("CheckEquality", ArgumentIndex.None, model, true);
+                                if (!isValueType)
                                 {
-                                    if (bool.TryParse(equalExpression.Token.ValueText, out bool isEquality))
+                                    if (isEquality)
                                     {
-                                        if (!isValueType)
-                                        {
-                                            if (isEquality)
-                                            {
-                                                ReportNonValueTypeEqualityCheck();
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (!isEquality)
-                                            {
-                                                foreach (var variable in field.Declaration.Variables)
-                                                {
-                                                    context.ReportDiagnostic(
-                                                        Diagnostic.Create(
-                                                            HighBandwidthUsageWarning,
-                                                            variable.GetLocation(),
-                                                            variable.Identifier.Text
-                                                        )
-                                                    );
-                                                }
-                                            }
-                                        }
+                                        ReportNonValueTypeEqualityCheck();
                                     }
                                 }
                                 else
                                 {
-                                    if (!isValueType)
+                                    if (!isEquality)
                                     {
-                                        ReportNonValueTypeEqualityCheck();
+                                        foreach (var variable in field.Declaration.Variables)
+                                        {
+                                            context.ReportDiagnostic(
+                                                Diagnostic.Create(
+                                                    HighBandwidthUsageWarning,
+                                                    variable.GetLocation(),
+                                                    variable.Identifier.Text
+                                                )
+                                            );
+                                        }
                                     }
                                 }
                             }

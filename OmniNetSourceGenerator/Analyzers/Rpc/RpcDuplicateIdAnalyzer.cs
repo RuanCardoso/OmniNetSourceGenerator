@@ -113,28 +113,8 @@ namespace OmniNetSourceGenerator.Analyzers
             AttributeSyntax attribute = method.GetAttribute(attributeName);
             if (attribute != null)
             {
-                var idExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("id", ArgumentIndex.First);
-                if (idExpression != null)
-                {
-                    if (byte.TryParse(idExpression.Token.ValueText, out byte idValue))
-                    {
-                        id = idValue;
-                        return true;
-                    }
-                }
-                else
-                {
-                    var idExpressionConst = attribute.GetArgumentExpression<IdentifierNameSyntax>("id", ArgumentIndex.First);
-                    if (idExpressionConst != null)
-                    {
-                        var symbol = semanticModel.GetSymbolInfo(idExpressionConst).Symbol;
-                        if (symbol is IFieldSymbol fieldSymbol && fieldSymbol.HasConstantValue)
-                        {
-                            id = byte.Parse(fieldSymbol.ConstantValue.ToString());
-                            return true;
-                        }
-                    }
-                }
+                id = attribute.GetArgumentValue<byte>("id", ArgumentIndex.First, semanticModel, 0);
+                return id > 0;
             }
 
             id = 0;

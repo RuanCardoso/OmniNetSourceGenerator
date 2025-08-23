@@ -12,6 +12,27 @@ using System.Text;
 
 namespace OmniNetSourceGenerator
 {
+	[Flags]
+	public enum HideMode
+	{
+		/// <summary>
+		/// No parts are hidden; both the backing field and property are visible in the Inspector.
+		/// </summary>
+		None = 0,
+		/// <summary>
+		/// Hides the backing field from the Unity Inspector.
+		/// </summary>
+		BackingField = 1,
+		/// <summary>
+		/// Hides the property from the Unity Inspector.
+		/// </summary>
+		Property = 2,
+		/// <summary>
+		/// Hides both the backing field and the property from the Unity Inspector.
+		/// </summary>
+		Both = 4
+	}
+
 	[Generator]
 	internal class NetVarGeneratorGenProperty : ISourceGenerator
 	{
@@ -77,24 +98,12 @@ namespace OmniNetSourceGenerator
 									foreach (FieldDeclarationSyntax field in @class.Members.Cast<FieldDeclarationSyntax>())
 									{
 										byte currentId = 0;
-										string hideMode = "HideMode.BackingField";
+										HideMode hideMode = HideMode.BackingField;
 										var attribute = field.GetAttribute("NetworkVariable");
 										if (attribute != null)
 										{
-											var idExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("id", ArgumentIndex.First);
-											if (idExpression != null)
-											{
-												if (byte.TryParse(idExpression.Token.ValueText, out byte idValue))
-												{
-													currentId = idValue;
-												}
-											}
-
-											var hideModeExpression = attribute.GetArgumentExpression<MemberAccessExpressionSyntax>("HideMode", ArgumentIndex.None);
-											if (hideModeExpression != null)
-											{
-												hideMode = hideModeExpression.ToString();
-											}
+											currentId = attribute.GetArgumentValue<byte>("id", ArgumentIndex.First, classModel, 0);
+											hideMode = attribute.GetArgumentValue<HideMode>("HideMode", ArgumentIndex.None, classModel, HideMode.BackingField);
 										}
 
 										if (currentId <= 0)
@@ -181,7 +190,7 @@ namespace OmniNetSourceGenerator
 																						new AttributeArgumentSyntax[]
 																						{
 																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"{currentId}")),
-																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"HideMode = {hideMode}"))
+																							SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"HideMode = HideMode.{hideMode}"))
 																						}
 																					)
 																				)
@@ -259,7 +268,7 @@ namespace OmniNetSourceGenerator
 										sb.Append(currentNamespace.NormalizeWhitespace().ToString());
 									}
 
-									context.AddSource($"{parentClass.Identifier.Text}_netvar_create_property_generated_code_.cs", sb.ToString());
+									context.AddSource($"{parentClass.Identifier.Text}_netvar_create_property_generated_code_.cs", Source.Clean(sb.ToString()));
 								}
 								else
 								{

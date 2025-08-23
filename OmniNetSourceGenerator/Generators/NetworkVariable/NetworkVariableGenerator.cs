@@ -14,6 +14,96 @@ using System.Text;
 
 namespace OmniNetSourceGenerator
 {
+
+	public enum Target
+	{
+		/// <summary>
+		/// Automatically selects the most appropriate recipients for the network message based on the current context.
+		/// <para>
+		/// On the server, this typically means broadcasting to all relevant clients. On the client, it may target the server or a specific group,
+		/// depending on the operation being performed. This is the default and recommended option for most use cases.
+		/// </para>
+		/// </summary>
+		Auto,
+
+		/// <summary>
+		/// Sends the message to all connected peers, including the sender itself.
+		/// <para>
+		/// Use this to broadcast updates or events that should be visible to every participant in the session, including the originator.
+		/// </para>
+		/// </summary>
+		Everyone,
+
+		/// <summary>
+		/// Sends the message exclusively to the sender (the local peer).
+		/// <para>
+		/// This option is typically used for providing immediate feedback, confirmations, or updates that are only relevant to the sender and should not be visible to other peers.
+		/// </para>
+		/// <para>
+		/// <b>Note:</b> If the sender is the server (peer id: 0), the message will be ignored and not processed. This ensures that server-only operations do not result in unnecessary or redundant network traffic.
+		/// </para>
+		/// </summary>
+		Self,
+
+		/// <summary>
+		/// Sends the message to all connected peers except the sender.
+		/// <para>
+		/// Use this to broadcast information to all participants while excluding the originator, such as when relaying a player's action to others.
+		/// </para>
+		/// </summary>
+		Others,
+
+		/// <summary>
+		/// Sends the message to all peers who are members of the same group(s) as the sender.
+		/// <para>
+		/// Sub-groups are not included. This is useful for group-based communication, such as team chat or localized events.
+		/// </para>
+		/// </summary>
+		Group,
+
+		/// <summary>
+		/// Sends the message to all peers in the same group(s) as the sender, excluding the sender itself.
+		/// <para>
+		/// Sub-groups are not included. Use this to notify group members of an action performed by the sender, without echoing it back.
+		/// </para>
+		/// </summary>
+		GroupOthers,
+	}
+
+	public enum DeliveryMode : byte
+	{
+		/// <summary>
+		/// Ensures packets are delivered reliably and in the exact order they were sent.
+		/// No packets will be dropped, duplicated, or arrive out of order.
+		/// </summary>
+		ReliableOrdered,
+
+		/// <summary>
+		/// Sends packets without guarantees. Packets may be dropped, duplicated, or arrive out of order.
+		/// This mode offers the lowest latency but no reliability.
+		/// </summary>
+		Unreliable,
+
+		/// <summary>
+		/// Ensures packets are delivered reliably but without enforcing any specific order.
+		/// Packets won't be dropped or duplicated, but they may arrive out of sequence.
+		/// </summary>
+		ReliableUnordered,
+
+		/// <summary>
+		/// Sends packets without reliability but guarantees they will arrive in order.
+		/// Packets may be dropped, but no duplicates will occur, and order is preserved.
+		/// </summary>
+		Sequenced,
+
+		/// <summary>
+		/// Ensures only the latest packet in a sequence is delivered reliably and in order.
+		/// Intermediate packets may be dropped, but duplicates will not occur, and the last packet is guaranteed.
+		/// This mode does not support fragmentation.
+		/// </summary>
+		ReliableSequenced
+	}
+
 	[Generator]
 	internal class NetVarGenerator : ISourceGenerator
 	{
@@ -36,6 +126,7 @@ namespace OmniNetSourceGenerator
 							StringBuilder sb = new StringBuilder();
 							sb.AppendLine("#nullable disable");
 							sb.AppendLine("#pragma warning disable");
+							sb.AppendLine("using System.Buffers;");
 							sb.AppendLine();
 
 							ClassDeclarationSyntax parentClass = @class.ParentClass.Clear(out var fromClass);
@@ -70,8 +161,8 @@ namespace OmniNetSourceGenerator
 										bool isClientAuthority = false;
 										string isServerBroadcastsClientUpdates = "true";
 										bool checkEquality = true;
-										string deliveryMode = "DeliveryMode.ReliableOrdered";
-										string target = "Target.Auto";
+										DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered;
+										Target target = Target.Auto;
 										byte sequenceChannel = 0;
 
 										TypeSyntax declarationType = member is FieldDeclarationSyntax field ? field.Declaration.Type : ((PropertyDeclarationSyntax)member).Type;
@@ -85,68 +176,14 @@ namespace OmniNetSourceGenerator
 										var attribute = member.GetAttribute("NetworkVariable");
 										if (attribute != null)
 										{
-											var idExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("id", ArgumentIndex.First);
-											if (idExpression != null)
-											{
-												if (byte.TryParse(idExpression.Token.ValueText, out byte idValue))
-												{
-													currentId = idValue;
-												}
-											}
-
-											var requiresOwnershipExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("RequiresOwnership", ArgumentIndex.Second);
-											if (requiresOwnershipExpression != null)
-											{
-												if (bool.TryParse(requiresOwnershipExpression.Token.ValueText, out bool requiresOwnershipValue))
-												{
-													requiresOwnership = requiresOwnershipValue;
-												}
-											}
-
-											var isClientAuthorityExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("IsClientAuthority", ArgumentIndex.Third);
-											if (isClientAuthorityExpression != null)
-											{
-												if (bool.TryParse(isClientAuthorityExpression.Token.ValueText, out bool isClientAuthorityValue))
-												{
-													isClientAuthority = isClientAuthorityValue;
-												}
-											}
-
-											var checkEqualityExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("CheckEquality", ArgumentIndex.Fourth);
-											if (checkEqualityExpression != null)
-											{
-												if (bool.TryParse(checkEqualityExpression.Token.ValueText, out bool checkEqualityValue))
-												{
-													checkEquality = checkEqualityValue;
-												}
-											}
-
-											var deliveryModeExpression = attribute.GetArgumentExpression<MemberAccessExpressionSyntax>("DeliveryMode", ArgumentIndex.Fifth);
-											if (deliveryModeExpression != null)
-											{
-												deliveryMode = deliveryModeExpression.ToString();
-											}
-
-											var targetExpression = attribute.GetArgumentExpression<MemberAccessExpressionSyntax>("Target", ArgumentIndex.Sixth);
-											if (targetExpression != null)
-											{
-												target = targetExpression.ToString();
-											}
-
-											var sequenceChannelExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("SequenceChannel", ArgumentIndex.Seventh);
-											if (sequenceChannelExpression != null)
-											{
-												if (byte.TryParse(sequenceChannelExpression.Token.ValueText, out byte sequenceChannelValue))
-												{
-													sequenceChannel = sequenceChannelValue;
-												}
-											}
-
-											var isServerBroadcastsClientUpdatesExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("ServerBroadcastsClientUpdates", ArgumentIndex.Eighth);
-											if (isServerBroadcastsClientUpdatesExpression != null)
-											{
-												isServerBroadcastsClientUpdates = isServerBroadcastsClientUpdatesExpression.Token.ValueText;
-											}
+											currentId = attribute.GetArgumentValue<byte>("id", ArgumentIndex.First, classModel, 0);
+											requiresOwnership = attribute.GetArgumentValue<bool>("RequiresOwnership", ArgumentIndex.Second, classModel, true);
+											isClientAuthority = attribute.GetArgumentValue<bool>("IsClientAuthority", ArgumentIndex.Third, classModel, false);
+											checkEquality = attribute.GetArgumentValue<bool>("CheckEquality", ArgumentIndex.Fourth, classModel, true);
+											deliveryMode = attribute.GetArgumentValue<DeliveryMode>("DeliveryMode", ArgumentIndex.Fifth, classModel, DeliveryMode.ReliableOrdered);
+											target = attribute.GetArgumentValue<Target>("Target", ArgumentIndex.Sixth, classModel, Target.Auto);
+											sequenceChannel = attribute.GetArgumentValue<byte>("SequenceChannel", ArgumentIndex.Seventh, classModel, 0);
+											isServerBroadcastsClientUpdates = attribute.GetArgumentValue<string>("ServerBroadcastsClientUpdates", ArgumentIndex.Eighth, classModel, "true").ToLowerInvariant();
 										}
 
 										if (currentId <= 0)
@@ -215,7 +252,7 @@ namespace OmniNetSourceGenerator
 											if (!isDelegate)
 												onNotifyInitialStateHandlers.Add(CreateSyncInitialState(identifierName, currentId.ToString(), baseClassName));
 
-											networkVariablesRegister.Add(CreateRegisterNetworkVariable(identifierName, currentId, requiresOwnership, isClientAuthority, checkEquality, deliveryMode, target, sequenceChannel));
+											networkVariablesRegister.Add(CreateRegisterNetworkVariable(identifierName, currentId, requiresOwnership, isClientAuthority, checkEquality, $"DeliveryMode.{deliveryMode}", $"Target.{target}", sequenceChannel));
 										}
 										else if (member is FieldDeclarationSyntax fieldSyntax)
 										{
@@ -276,7 +313,7 @@ namespace OmniNetSourceGenerator
 												if (!isDelegate)
 													onNotifyInitialStateHandlers.Add(CreateSyncInitialState(variableName, currentId.ToString(), baseClassName));
 
-												networkVariablesRegister.Add(CreateRegisterNetworkVariable(variableName, currentId, requiresOwnership, isClientAuthority, checkEquality, deliveryMode, target, sequenceChannel));
+												networkVariablesRegister.Add(CreateRegisterNetworkVariable(variableName, currentId, requiresOwnership, isClientAuthority, checkEquality, $"DeliveryMode.{deliveryMode}", $"Target.{target}", sequenceChannel));
 											}
 										}
 									}
@@ -392,7 +429,7 @@ namespace OmniNetSourceGenerator
 										sb.Append(currentNamespace.NormalizeWhitespace().ToString());
 									}
 
-									context.AddSource($"{parentClass.Identifier.Text}_netvar_generated_code_.cs", sb.ToString());
+									context.AddSource($"{parentClass.Identifier.Text}_netvar_generated_code_.cs", Source.Clean(sb.ToString()));
 								}
 								else
 								{
@@ -470,7 +507,7 @@ namespace OmniNetSourceGenerator
 			var statements = new List<StatementSyntax>
 			{
 				SyntaxFactory.ParseStatement($"options ??= DefaultNetworkVariableOptions;"),
-				SyntaxFactory.ParseStatement("using var buffer = NetworkManager.Pool.Rent();")
+				SyntaxFactory.ParseStatement("using var buffer = NetworkManager.Pool.Rent(enableTracking: false);")
 			};
 
 			#region Invoke Arguments
@@ -739,8 +776,8 @@ namespace OmniNetSourceGenerator
 						{
 							SyntaxFactory.Block(
 								SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
-								SyntaxFactory.ParseStatement("using var nBuffer = NetworkManager.Pool.Rent();"),
-								SyntaxFactory.ParseStatement("nBuffer.WriteRawBytes(buffer.GetSpan().Slice(0, buffer.Length)); // from current position to end > skip propertyId(header)"),
+								SyntaxFactory.ParseStatement("using var nBuffer = NetworkManager.Pool.Rent(enableTracking: false);"),
+								SyntaxFactory.ParseStatement("nBuffer.Write(buffer.GetSpan().Slice(0, buffer.Length)); // from current position to end > skip propertyId(header)"),
 								SyntaxFactory.ParseStatement($"nBuffer.SeekToBegin();"),
 								isSerializableWithPeer
 									? SyntaxFactory.ParseStatement($"var nextValue = nBuffer.Deserialize<{propertyType}>(peer != null ? peer : NetworkManager.LocalPeer, {determinedValue});")

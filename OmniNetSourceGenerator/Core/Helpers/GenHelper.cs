@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -167,6 +168,30 @@ namespace SourceGenerator.Helpers
 		{
 			var parameter = method.ParameterList.Parameters.FirstOrDefault();
 			return parameter != null && parameter.Type.ToString() == "DataBuffer";
+		}
+	}
+
+	public static class Source
+	{
+		private class SourceFilter : CSharpSyntaxRewriter
+		{
+			public override SyntaxTrivia VisitTrivia(SyntaxTrivia trivia)
+			{
+				if (trivia.IsDirective)
+					return SyntaxFactory.EndOfLine(Environment.NewLine);
+
+				return trivia;
+			}
+		}
+
+		public static string Clean(string sourceCode)
+		{
+			var tree = CSharpSyntaxTree.ParseText(sourceCode);
+			var root = tree.GetRoot();
+
+			var filter = new SourceFilter();
+			var source = filter.Visit(root);
+			return source.NormalizeWhitespace().ToFullString();
 		}
 	}
 

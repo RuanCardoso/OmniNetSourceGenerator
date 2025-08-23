@@ -44,18 +44,9 @@ namespace OmniNetSourceGenerator
 								List<StatementSyntax> statements = new List<StatementSyntax>();
 								foreach (MemberDeclarationSyntax member in @class.Members)
 								{
-									string serviceName = "";
-									var attributes = member.GetAttributes("GlobalService", "LocalService");
-									foreach (var attribute in attributes)
-									{
-										var nameExpression = attribute.GetArgumentExpression<LiteralExpressionSyntax>("ServiceName", ArgumentIndex.First);
-										if (nameExpression != null)
-										{
-											serviceName = nameExpression.Token.ValueText;
-										}
-									}
-
 									bool isGlobalService = member.HasAttribute("GlobalService");
+									var attribute = member.GetAttribute(isGlobalService ? "GlobalService" : "LocalService");
+									var serviceName = attribute.GetArgumentValue<string>("ServiceName", ArgumentIndex.First, classModel, null);
 									if (member is FieldDeclarationSyntax field)
 									{
 										foreach (VariableDeclaratorSyntax variable in field.Declaration.Variables)
@@ -88,7 +79,7 @@ namespace OmniNetSourceGenerator
 									sb.Append(currentNamespace.NormalizeWhitespace().ToString());
 								}
 
-								context.AddSource($"{parentClass.Identifier.Text}_networkservice_injection_generated_code_.cs", sb.ToString());
+								context.AddSource($"{parentClass.Identifier.Text}_networkservice_injection_generated_code_.cs", Source.Clean(sb.ToString()));
 							}
 							else
 							{

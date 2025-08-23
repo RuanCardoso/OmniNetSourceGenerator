@@ -40,6 +40,16 @@ namespace OmniNetSourceGenerator.Analyzers
             description: "Following a consistent naming convention helps identify RPC methods at a glance and improves code maintainability."
         );
 
+        public static readonly DiagnosticDescriptor RpcMethodNamingConventionError = new DiagnosticDescriptor(
+           id: "OMNI0134",
+           title: "RPC Method Naming Convention",
+           messageFormat: "The RPC method '{0}' should not end with the 'Rpc' suffix. This suffix is recommended only for manual mode.",
+           category: "Design",
+           defaultSeverity: DiagnosticSeverity.Error,
+           isEnabledByDefault: true,
+           description: "Following a consistent naming convention helps identify RPC methods at a glance and improves code maintainability."
+       );
+
         private readonly DiagnosticDescriptor[] descriptors = new DiagnosticDescriptor[]
         {
             RpcMethodShouldBePrivate,
@@ -47,6 +57,7 @@ namespace OmniNetSourceGenerator.Analyzers
             StaticRpcMethod,
             GenHelper.PartialKeywordMissing,
             RpcMethodNamingConvention,
+            RpcMethodNamingConventionError
         };
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(descriptors);
@@ -79,13 +90,28 @@ namespace OmniNetSourceGenerator.Analyzers
                         );
                     }
 
-                    if (!method.Identifier.Text.EndsWith("Rpc", StringComparison.Ordinal))
+                    bool isAutoRpc = !GenHelper.IsManualRpc(method);
+                    if (!isAutoRpc)
                     {
-                        cContext.ReportDiagnostic(
-                            RpcMethodNamingConvention,
-                            method.Identifier.GetLocation(),
-                            method.Identifier.Text
-                        );
+                        if (!method.Identifier.Text.EndsWith("Rpc", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cContext.ReportDiagnostic(
+                                RpcMethodNamingConvention,
+                                method.Identifier.GetLocation(),
+                                method.Identifier.Text
+                            );
+                        }
+                    }
+                    else
+                    {
+                        if (method.Identifier.Text.EndsWith("Rpc", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cContext.ReportDiagnostic(
+                                RpcMethodNamingConventionError,
+                                method.Identifier.GetLocation(),
+                                method.Identifier.Text
+                            );
+                        }
                     }
 
                     if (!method.HasModifier(SyntaxKind.PrivateKeyword))

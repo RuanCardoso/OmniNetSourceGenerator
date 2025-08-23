@@ -131,14 +131,47 @@ namespace Omni.Core
 		public int SequenceChannel { get; set; } = 0;
 	}
 
-	public enum DeliveryMode
+	public enum DeliveryMode : byte
 	{
+		/// <summary>
+		/// Ensures packets are delivered reliably and in the exact order they were sent.
+		/// No packets will be dropped, duplicated, or arrive out of order.
+		/// </summary>
 		ReliableOrdered,
-		Unreliable
+
+		/// <summary>
+		/// Sends packets without guarantees. Packets may be dropped, duplicated, or arrive out of order.
+		/// This mode offers the lowest latency but no reliability.
+		/// </summary>
+		Unreliable,
+
+		/// <summary>
+		/// Ensures packets are delivered reliably but without enforcing any specific order.
+		/// Packets won't be dropped or duplicated, but they may arrive out of sequence.
+		/// </summary>
+		ReliableUnordered,
+
+		/// <summary>
+		/// Sends packets without reliability but guarantees they will arrive in order.
+		/// Packets may be dropped, but no duplicates will occur, and order is preserved.
+		/// </summary>
+		Sequenced,
+
+		/// <summary>
+		/// Ensures only the latest packet in a sequence is delivered reliably and in order.
+		/// Intermediate packets may be dropped, but duplicates will not occur, and the last packet is guaranteed.
+		/// This mode does not support fragmentation.
+		/// </summary>
+		ReliableSequenced
 	}
 
 	public class Server : EventRpc
 	{
+		public Server() : this(0)
+		{
+
+		}
+
 		public Server(byte id)
 		{
 			Id = id;
@@ -147,6 +180,11 @@ namespace Omni.Core
 
 	public class Client : EventRpc
 	{
+		public Client() : this(0)
+		{
+
+		}
+
 		public Client(byte id)
 		{
 			Id = id;
@@ -156,9 +194,22 @@ namespace Omni.Core
 	[Flags]
 	public enum HideMode
 	{
-		BackingField = 0,
-		Property = 1,
-		Both = 2
+		/// <summary>
+		/// No parts are hidden; both the backing field and property are visible in the Inspector.
+		/// </summary>
+		None = 0,
+		/// <summary>
+		/// Hides the backing field from the Unity Inspector.
+		/// </summary>
+		BackingField = 1,
+		/// <summary>
+		/// Hides the property from the Unity Inspector.
+		/// </summary>
+		Property = 2,
+		/// <summary>
+		/// Hides both the backing field and the property from the Unity Inspector.
+		/// </summary>
+		Both = 4
 	}
 
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Event, AllowMultiple = false, Inherited = true)]
