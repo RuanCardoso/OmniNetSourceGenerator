@@ -36,6 +36,50 @@ namespace OmniNetSourceGenerator
 	[Generator]
 	internal class NetVarGeneratorGenProperty : ISourceGenerator
 	{
+		public static Dictionary<string, byte> GetCollectionOfNetworkVariables(ITypeSymbol symbol)
+		{
+			var result = new Dictionary<string, byte>();
+			byte index = 1;
+
+			// 1. Sobe toda a cadeia até a raiz
+			var stack = new Stack<ITypeSymbol>();
+			var current = symbol;
+			while (current != null)
+			{
+				if (current.TypeKind == TypeKind.Class)
+					stack.Push(current);
+
+				current = current.BaseType;
+			}
+
+			// 2. Desce da base até o filho
+			while (stack.Count > 0)
+			{
+				var type = stack.Pop();
+
+				foreach (var field in type.GetMembers().OfType<IFieldSymbol>())
+				{
+					// Só campos normais (descarta const, static readonly, etc se quiser)
+					if (field.AssociatedSymbol == null) // ignora auto-props backing fields
+					{
+						var hasAttr = field
+							.GetAttributes()
+							.Any(a =>
+								a.AttributeClass?.Name == "NetworkVariableAttribute"
+								|| a.AttributeClass?.ToDisplayString() == "NetworkVariableAttribute");
+
+						if (hasAttr)
+						{
+							result[field.Name] = index;
+							index++;
+						}
+					}
+				}
+			}
+
+			return result;
+		}
+
 		public void Execute(GeneratorExecutionContext context)
 		{
 			if (!GenHelper.WillProcess(context.Compilation.Assembly))
@@ -65,6 +109,8 @@ namespace OmniNetSourceGenerator
 							if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 							{
 								var classModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+								var uniqueIds = GetCollectionOfNetworkVariables(classModel.GetDeclaredSymbol(fromClass));
+
 								bool isNetworkBehaviour = fromClass.InheritsFromClass(classModel, "NetworkBehaviour");
 								bool isClientBehaviour = fromClass.InheritsFromClass(classModel, "ClientBehaviour");
 								bool isServerBehaviour = fromClass.InheritsFromClass(classModel, "ServerBehaviour");
@@ -76,8 +122,6 @@ namespace OmniNetSourceGenerator
 									if (hasNamespace) currentNamespace = currentNamespace.Clear(out _);
 
 									List<MemberDeclarationSyntax> memberList = new List<MemberDeclarationSyntax>();
-									HashSet<byte> ids = new HashSet<byte>();
-
 									PropertyDeclarationSyntax staticDefaultSettings = SyntaxFactory
 										.PropertyDeclaration(SyntaxFactory.ParseTypeName("NetworkVariableOptions"), $"DefaultNetworkVariableOptions")
 										.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword)))
@@ -106,27 +150,6 @@ namespace OmniNetSourceGenerator
 											hideMode = attribute.GetArgumentValue<HideMode>("HideMode", ArgumentIndex.None, classModel, HideMode.BackingField);
 										}
 
-										if (currentId <= 0)
-										{
-											int baseDepth = fromClass.GetBaseDepth(classModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour", "DualBehaviour");
-											if (baseDepth != 0)
-											{
-												unchecked
-												{
-													currentId = (byte)(255 - (255 / baseDepth));
-												}
-											}
-										}
-
-										if (currentId <= 0)
-										{
-											currentId++;
-											while (ids.Contains(currentId))
-											{
-												currentId++;
-											}
-										}
-
 										TypeSyntax declarationType = field.Declaration.Type;
 										ITypeSymbol typeSymbol = classModel.GetTypeInfo(declarationType).Type;
 										if (typeSymbol.IsDelegate())
@@ -142,6 +165,9 @@ namespace OmniNetSourceGenerator
 												continue;
 											}
 
+											if (currentId <= 0)
+												currentId = uniqueIds[variableName];
+
 											// remove m_ prefix
 											variableName = variableName.Substring(2);
 											if (GenHelper.ReportInvalidFieldNamingIsUpper(new Context(context), variableName))
@@ -149,12 +175,6 @@ namespace OmniNetSourceGenerator
 												continue;
 											}
 
-											while (ids.Contains(currentId))
-											{
-												currentId++;
-											}
-
-											ids.Add(currentId);
 											memberList.Add(
 												SyntaxFactory
 													.PropertyDeclaration(SyntaxFactory.ParseTypeName("NetworkVariableOptions"), $"{variableName}Options")

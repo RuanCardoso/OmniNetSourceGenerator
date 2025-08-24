@@ -1,93 +1,235 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Drawing;
-using System.Numerics;
 using Omni.Core;
-using TestA;
 
-public class Constants
-{
-	public const int MoveRpcId = 12;
-	public const DeliveryMode MoveRpcDeliveryMode = DeliveryMode.Unreliable;
-}
 
-namespace TestA
+public partial class TestsRPCBaseeBase : NetworkBehaviour
 {
-	public partial class PlayerServer : NetworkBehaviour
+	[NetworkVariable]
+	private float m_Darma, m_Koty, m_Ritu;
+
+	[NetworkVariable]
+	private float m_Baka, m_Tyro;
+
+
+	[Client]
+	void Modsdsve()
+	{
+	}
+
+	[Client]
+	void Jsdsump()
+	{
+
+	}
+
+	[Client]
+	void Atfdgtack()
+	{
+
+	}
+
+	[Client]
+	void Dehgfhgfhfend()
 	{
 
 	}
 }
 
-namespace TestA
+public partial class TestsRPCBase : TestsRPCBaseeBase
 {
 
-#pragma warning disable OMNI095
-	[GenRpc("PlayerServer")]
+	[NetworkVariable]
+	private float m_Vida, m_Mana;
 
-	public partial class PlayerClient : NetworkBehaviour
+
+	[Client]
+	void Move()
+	{
+	}
+
+	[Client]
+	void Jump()
 	{
 
-		const byte IdVar = 215;
+	}
 
-#if DEBUG
-#else
-#endif
+	[Client]
+	void Attack()
+	{
 
-		[NetworkVariable(ServerBroadcastsClientUpdates = true, SequenceChannel = 14, Target = Target.GroupOthers)]
-		private int m_Vida = 100;
+	}
 
+	[Client]
+	void Defend()
+	{
 
-#if DEBUG
-		#region RPC
-		#endregion
+	}
+}
 
-		[Client]
-		void Test()
-		{
+public partial class TestsRPC : TestsRPCBase
+{
+	[NetworkVariable]
+	private float m_Lama;
 
-		}
+	[NetworkVariable(Target = Target.Self)]
+	private float m_Kama;
 
-		[Server(1)]
-		void Test2()
-		{
+	[NetworkVariable]
+	private float m_Dama, m_REYT;
 
-		}
+	[Client]
+	void Sprint(int a)
+	{
 
-		[Server(2)]
-		void Test24()
-		{
+	}
 
-		}
+	[Client]
+	void Crouch()
+	{
 
-		[Server]
-		void Test3()
-		{
-		}
+	}
 
-#if DEBUG
+	[Client]
+	void Reload()
+	{
 
+	}
 
-		static void Main()
-		{
+	[Client]
+	void Interact()
+	{
 
-		}
-#endif
-#endif
+	}
 
-#if DEBUG
+	[Client]
+	void OpenInventory()
+	{
 
+	}
 
-#endif
+	[Client]
+	void UseItem()
+	{
 
+	}
 
+	[Client]
+	void CastSpell()
+	{
 
-#if DEBUG
-#elif DEBUG
-#else
+	}
 
-#endif
+	[Client]
+	void ChangeWeapon()
+	{
+
+	}
+
+	[Client]
+	void Heal()
+	{
+
+	}
+
+	[Client]
+	void BlockAttack()
+	{
+
+	}
+
+	[Client]
+	void Dodge()
+	{
+
+	}
+
+	[Client]
+	void ClimbWall()
+	{
+
+	}
+
+	[Client]
+	void SwimUnderwater()
+	{
+
+	}
+
+	[Client]
+	void DriveVehicle()
+	{
+
+	}
+
+	[Client]
+	void OpenDoor()
+	{
+
+	}
+
+	[Client]
+	void PickupObject()
+	{
+
+	}
+
+	[Client]
+	void ThrowGrenade()
+	{
+
+	}
+
+	[Client]
+	void AimWeapon()
+	{
+
+	}
+
+	[Client]
+	void ActivateSkill()
+	{
+
+	}
+
+	[Client]
+	void SendMessage()
+	{
+
+	}
+
+	[Client]
+	void ViewMap()
+	{
+
+	}
+
+	[Client]
+	void SaveProgress()
+	{
+
+	}
+
+	[Client]
+	void PauseGame()
+	{
+
+	}
+
+	[Client]
+	void ToggleFlashlight()
+	{
+
+	}
+
+	[Client]
+	void CheckHealth()
+	{
+
+	}
+
+	[Client(200)]
+	void RequestBackup()
+	{
 
 	}
 }

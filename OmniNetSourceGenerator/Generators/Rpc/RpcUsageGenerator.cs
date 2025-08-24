@@ -14,6 +14,48 @@ namespace OmniNetSourceGenerator
     [Generator]
     internal class RpcUsageGenerator : ISourceGenerator
     {
+        private static Dictionary<string, byte> GetCollectionOfUniqueIds(ITypeSymbol symbol, string attrName)
+        {
+            var result = new Dictionary<string, byte>();
+            byte index = 1;
+
+            // 1. Sobe toda a cadeia até a raiz (System.Object normalmente)
+            var stack = new Stack<ITypeSymbol>();
+            var current = symbol;
+            while (current != null)
+            {
+                if (current.TypeKind == TypeKind.Class)
+                    stack.Push(current);
+
+                current = current.BaseType;
+            }
+
+            // 2. Desce da base até o filho
+            while (stack.Count > 0)
+            {
+                var type = stack.Pop();
+
+                foreach (var member in type.GetMembers().OfType<IMethodSymbol>())
+                {
+                    if (member.MethodKind == MethodKind.Ordinary)
+                    {
+                        var hasAttr = member
+                            .GetAttributes()
+                            .Any(a => a.AttributeClass?.Name == attrName
+                                   || a.AttributeClass?.ToDisplayString() == attrName);
+
+                        if (hasAttr)
+                        {
+                            result[member.Name] = index;
+                            index++;
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
         public void Execute(GeneratorExecutionContext context)
         {
             if (!GenHelper.WillProcess(context.Compilation.Assembly))
@@ -42,6 +84,9 @@ namespace OmniNetSourceGenerator
                             if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
                             {
                                 var classModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+                                var uniqueClientIds = GetCollectionOfUniqueIds(classModel.GetDeclaredSymbol(fromClass), "ClientAttribute");
+                                var uniqueServerIds = GetCollectionOfUniqueIds(classModel.GetDeclaredSymbol(fromClass), "ServerAttribute");
+
                                 bool isNetworkBehaviour = fromClass.InheritsFromClass(classModel, "NetworkBehaviour");
                                 bool isClientBehaviour = fromClass.InheritsFromClass(classModel, "ClientBehaviour");
                                 bool isServerBehaviour = fromClass.InheritsFromClass(classModel, "ServerBehaviour");
@@ -56,9 +101,6 @@ namespace OmniNetSourceGenerator
                                 var methodBody = new StringBuilder();
                                 methodBody.AppendLine("if (false) {"); // Ensure the code is never executed
 
-                                HashSet<byte> clientIds = new HashSet<byte>();
-                                HashSet<byte> serverIds = new HashSet<byte>();
-
                                 string classname = fromClass.GetAttribute("GenRpc")?.GetArgumentValue<string>("classname", ArgumentIndex.First, classModel, null) ?? null;
                                 foreach (MethodDeclarationSyntax method in @class.Members.Cast<MethodDeclarationSyntax>())
                                 {
@@ -70,32 +112,18 @@ namespace OmniNetSourceGenerator
 
                                     string methodName = method.Identifier.Text;
                                     var parameters = method.ParameterList.Parameters;
-                                    methodBody.AppendLine($"{methodName}({string.Join(", ", Enumerable.Repeat("default", parameters.Count))});");
 
                                     // Generate auto id to the RPC if not specified..
                                     AttributeSyntax attribute = method.GetAttribute(isClientRpc ? "Client" : "Server");
                                     byte currentId = attribute.GetArgumentValue<byte>("id", ArgumentIndex.First, classModel);
                                     if (currentId <= 0)
                                     {
-                                        int baseDepth = fromClass.GetBaseDepth(classModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour", "DualBehaviour");
-                                        if (baseDepth != 0)
-                                        {
-                                            unchecked
-                                            {
-                                                currentId = (byte)(255 - (255 / baseDepth));
-                                            }
-                                        }
+                                        var uniqueIds = !isServerRpc ? uniqueClientIds : uniqueServerIds;
+                                        currentId = uniqueIds[methodName];
                                     }
 
-                                    var uniqueIds = isServerRpc ? serverIds : clientIds;
-                                    if (currentId <= 0)
-                                    {
-                                        currentId++;
-                                        while (uniqueIds.Contains(currentId))
-                                            currentId++;
-                                    }
-
-                                    uniqueIds.Add(currentId);
+                                    methodBody.AppendLine($"// Id -> {currentId}");
+                                    methodBody.AppendLine($"{methodName}({string.Join(", ", Enumerable.Repeat("default", parameters.Count))});");
                                     if (!GenHelper.IsManualRpc(method))
                                     {
                                         memberList.Add(GenerateRpcMethod(method, attribute, currentId));

@@ -178,7 +178,14 @@ namespace SourceGenerator.Helpers
 			public override SyntaxTrivia VisitTrivia(SyntaxTrivia trivia)
 			{
 				if (trivia.IsDirective)
+				{
+					var text = trivia.ToFullString().Trim();
+					// Keep #nullable disable and #pragma warning disable
+					if (text.StartsWith("#nullable disable") || text.StartsWith("#pragma warning disable"))
+						return trivia;
+
 					return SyntaxFactory.EndOfLine(Environment.NewLine);
+				}
 
 				return trivia;
 			}

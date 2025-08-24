@@ -167,9 +167,9 @@ namespace Omni.Core
 
 	public class Server : EventRpc
 	{
-		public Server() : this(0)
+		public Server()
 		{
-
+			Id = 0;
 		}
 
 		public Server(byte id)
@@ -178,14 +178,14 @@ namespace Omni.Core
 		}
 	}
 
-	public class Client : EventRpc
+	public class ClientAttribute : EventRpc
 	{
-		public Client() : this(0)
+		public ClientAttribute() : this(0)
 		{
 
 		}
 
-		public Client(byte id)
+		public ClientAttribute(byte id)
 		{
 			Id = id;
 		}
@@ -213,7 +213,7 @@ namespace Omni.Core
 	}
 
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Event, AllowMultiple = false, Inherited = true)]
-	public class NetworkVariable : Attribute
+	public class NetworkVariableAttribute : Attribute
 	{
 		public byte Id { get; set; }
 
@@ -258,7 +258,12 @@ namespace Omni.Core
 
 		public byte SequenceChannel { get; set; } = 0;
 
-		public NetworkVariable(byte id = 0) { }
+		public NetworkVariableAttribute()
+		{
+			Id = 0;
+		}
+		
+		public NetworkVariableAttribute(byte id) { }
 	}
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]

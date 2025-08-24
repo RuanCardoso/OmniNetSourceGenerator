@@ -298,6 +298,7 @@ namespace SourceGenerator.Extensions
 				if (arguments.Length == 0)
 					return defaultValue;
 
+				// Parametros opcionais
 				foreach (var argument in arguments)
 				{
 					string argName = null;
@@ -335,19 +336,31 @@ namespace SourceGenerator.Extensions
 					}
 				}
 
+				// Parametros obrigatorios
 				if (argumentIndex >= 0 && argumentIndex < arguments.Length)
 				{
-					var expr = arguments[argumentIndex].Expression;
-					var constValue = semanticModel.GetConstantValue(expr);
-					if (constValue.HasValue)
+					var symbolInfo = semanticModel.GetSymbolInfo(attribute);
+					if (symbolInfo.Symbol is IMethodSymbol ctorSymbol)
 					{
-						if (constValue.Value is TResult val)
-							return val;
-
-						if (constValue.Value is IConvertible convertible)
+						if (argumentIndex < ctorSymbol.Parameters.Length)
 						{
-							try { return (TResult)Convert.ChangeType(convertible, typeof(TResult)); }
-							catch { return defaultValue; }
+							var param = ctorSymbol.Parameters[argumentIndex];
+							if (string.Equals(param.Name, argumentName, StringComparison.OrdinalIgnoreCase))
+							{
+								var expr = arguments[argumentIndex].Expression;
+								var constValue = semanticModel.GetConstantValue(expr);
+								if (constValue.HasValue)
+								{
+									if (constValue.Value is TResult val)
+										return val;
+
+									if (constValue.Value is IConvertible convertible)
+									{
+										try { return (TResult)Convert.ChangeType(convertible, typeof(TResult)); }
+										catch { return defaultValue; }
+									}
+								}
+							}
 						}
 					}
 				}

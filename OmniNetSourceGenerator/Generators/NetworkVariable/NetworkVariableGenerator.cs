@@ -6,6 +6,7 @@ using SourceGenerator.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -107,6 +108,33 @@ namespace OmniNetSourceGenerator
 	[Generator]
 	internal class NetVarGenerator : ISourceGenerator
 	{
+		public static int Hash1To230(string input)
+		{
+			// Constantes FNV-1a de 32 bits
+			const uint FNV_OFFSET_BASIS = 2166136261;
+			const uint FNV_PRIME = 16777619;
+
+			// Inicializa o hash com o offset basis
+			uint hash = FNV_OFFSET_BASIS;
+
+			// Converte a string para bytes UTF-8
+			byte[] bytes = Encoding.UTF8.GetBytes(input ?? string.Empty);
+
+			// Processa cada byte da string
+			foreach (byte b in bytes)
+			{
+				// XOR do hash atual com o byte
+				hash ^= b;
+				// Multiplicação pelo primo FNV
+				hash *= FNV_PRIME;
+			}
+
+			// Mapeia o resultado para o intervalo [1, 230]
+			int result = (int)(hash % 230) + 1;
+
+			return result;
+		}
+
 		public void Execute(GeneratorExecutionContext context)
 		{
 			if (!GenHelper.WillProcess(context.Compilation.Assembly))
@@ -136,6 +164,8 @@ namespace OmniNetSourceGenerator
 							if (parentClass.HasModifier(SyntaxKind.PartialKeyword))
 							{
 								var classModel = context.Compilation.GetSemanticModel(fromClass.SyntaxTree);
+								var uniqueIds = NetVarGeneratorGenProperty.GetCollectionOfNetworkVariables(classModel.GetDeclaredSymbol(fromClass));
+
 								bool isNetworkBehaviour = fromClass.InheritsFromClass(classModel, "NetworkBehaviour");
 								bool isClientBehaviour = fromClass.InheritsFromClass(classModel, "ClientBehaviour");
 								bool isServerBehaviour = fromClass.InheritsFromClass(classModel, "ServerBehaviour");
@@ -153,7 +183,6 @@ namespace OmniNetSourceGenerator
 									List<StatementSyntax> onNotifyCollectionHandlers = new List<StatementSyntax>();
 									List<StatementSyntax> onNotifyInitialStateHandlers = new List<StatementSyntax>();
 
-									HashSet<byte> uniqueIds = new HashSet<byte>();
 									foreach (MemberDeclarationSyntax member in @class.Members)
 									{
 										byte currentId = 0;
@@ -186,37 +215,13 @@ namespace OmniNetSourceGenerator
 											isServerBroadcastsClientUpdates = attribute.GetArgumentValue<string>("ServerBroadcastsClientUpdates", ArgumentIndex.Eighth, classModel, "true").ToLowerInvariant();
 										}
 
-										if (currentId <= 0)
-										{
-											int baseDepth = fromClass.GetBaseDepth(classModel, "NetworkBehaviour", "ClientBehaviour", "ServerBehaviour", "DualBehaviour");
-											if (baseDepth != 0)
-											{
-												unchecked
-												{
-													currentId = (byte)(255 - (255 / baseDepth));
-												}
-											}
-										}
-
-										if (currentId <= 0)
-										{
-											currentId++;
-											while (uniqueIds.Contains(currentId))
-											{
-												currentId++;
-											}
-										}
-
 										var typeString = declarationType.ToString();
 										if (member is PropertyDeclarationSyntax propSyntax)
 										{
 											string identifierName = propSyntax.Identifier.Text;
-											while (uniqueIds.Contains(currentId))
-											{
-												currentId++;
-											}
+											if (currentId <= 0)
+												currentId = (byte)Hash1To230(identifierName);
 
-											uniqueIds.Add(currentId);
 											if (!isDelegate)
 											{
 												sections.Add(CreateSection(currentId.ToString(), identifierName, typeString, isSerializable, isSerializableWithPeer, isServerBroadcastsClientUpdates, determinedValue));
@@ -265,6 +270,9 @@ namespace OmniNetSourceGenerator
 													continue;
 												}
 
+												if (currentId <= 0)
+													currentId = uniqueIds[fieldName];
+
 												// Remove m_ prefix
 												string variableName = fieldName.Substring(2);
 												if (GenHelper.ReportInvalidFieldNamingIsUpper(new Context(context), variableName))
@@ -272,12 +280,6 @@ namespace OmniNetSourceGenerator
 													continue;
 												}
 
-												while (uniqueIds.Contains(currentId))
-												{
-													currentId++;
-												}
-
-												uniqueIds.Add(currentId);
 												if (!isDelegate)
 												{
 													sections.Add(CreateSection(currentId.ToString(), variableName, typeString, isSerializable, isSerializableWithPeer, isServerBroadcastsClientUpdates, determinedValue));
@@ -314,6 +316,7 @@ namespace OmniNetSourceGenerator
 													onNotifyInitialStateHandlers.Add(CreateSyncInitialState(variableName, currentId.ToString(), baseClassName));
 
 												networkVariablesRegister.Add(CreateRegisterNetworkVariable(variableName, currentId, requiresOwnership, isClientAuthority, checkEquality, $"DeliveryMode.{deliveryMode}", $"Target.{target}", sequenceChannel));
+												currentId++;
 											}
 										}
 									}
