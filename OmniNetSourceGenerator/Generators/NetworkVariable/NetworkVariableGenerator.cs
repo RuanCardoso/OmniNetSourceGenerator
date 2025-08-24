@@ -564,7 +564,7 @@ namespace OmniNetSourceGenerator
 		{
 			return SyntaxFactory
 				.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), $"Sync{propertyName}")
-				.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword)))
+				.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
 				.WithParameterList(
 					SyntaxFactory.ParameterList(
 						SyntaxFactory.SeparatedList(

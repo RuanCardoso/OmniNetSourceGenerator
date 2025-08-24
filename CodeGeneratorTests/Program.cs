@@ -12,8 +12,9 @@ public partial class TestsRPCBaseeBase : NetworkBehaviour
 
 
 	[Client]
-	void Modsdsve()
+	public void Modsdsve()
 	{
+		
 	}
 
 	[Client]

@@ -306,7 +306,7 @@ namespace OmniNetSourceGenerator
                     PredefinedType(Token(SyntaxKind.VoidKeyword)),
                     methodName
                 )
-                .WithModifiers(TokenList(new[] { Token(SyntaxKind.PrivateKeyword) }))
+                .WithModifiers(TokenList(new[] { Token(SyntaxKind.PublicKeyword) }))
                 .WithParameterList(
                     ParameterList(SeparatedList(allParams))
                 )
@@ -399,7 +399,7 @@ namespace OmniNetSourceGenerator
                     PredefinedType(Token(SyntaxKind.VoidKeyword)),
                     methodName
                 )
-                .WithModifiers(TokenList(new[] { Token(SyntaxKind.PrivateKeyword) }))
+                .WithModifiers(TokenList(new[] { Token(SyntaxKind.PublicKeyword) }))
                 .WithParameterList(
                     ParameterList(SeparatedList(allParams))
                 )
@@ -435,7 +435,7 @@ namespace OmniNetSourceGenerator
             ));
 
             return MethodDeclaration(method.ReturnType, Identifier("__" + method.Identifier.Text))
-            .WithModifiers(TokenList(Token(SyntaxKind.PrivateKeyword)))
+            .WithModifiers(TokenList(Token(SyntaxKind.ProtectedKeyword)))
             .WithAttributeLists(
             SingletonList(
                 AttributeList(
