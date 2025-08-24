@@ -31,7 +31,7 @@ namespace OmniNetSourceGenerator.Analyzers
             messageFormat: "The Network Variable '{0}' has 'CheckEquality' enabled. For reference types this may introduce extra performance cost and will only detect changes when a different instance is assigned. "
                  + "If the same instance is reused, updates will not be synchronized.",
             category: "Performance",
-            defaultSeverity: DiagnosticSeverity.Info,
+            defaultSeverity: DiagnosticSeverity.Warning,
             isEnabledByDefault: true
         );
 
