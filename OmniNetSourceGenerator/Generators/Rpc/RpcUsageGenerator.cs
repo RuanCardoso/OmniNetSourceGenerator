@@ -73,6 +73,7 @@ namespace OmniNetSourceGenerator
                             StringBuilder sb = new StringBuilder();
                             sb.AppendLine("#nullable disable");
                             sb.AppendLine("#pragma warning disable");
+                            sb.AppendLine("using System;");
                             sb.AppendLine("using UnityEngine.Scripting;");
                             sb.AppendLine("using System.ComponentModel;");
                             sb.AppendLine();
