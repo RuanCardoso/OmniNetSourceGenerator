@@ -151,7 +151,7 @@ namespace OmniNetSourceGenerator
                                 memberList.Add(
                                     MethodDeclaration(
                                         PredefinedType(Token(SyntaxKind.VoidKeyword)),
-                                        "PreventRpcStripping"
+                                        "___PreventRpcStripping"
                                     )
                                     .WithModifiers(
                                         TokenList(
@@ -166,7 +166,24 @@ namespace OmniNetSourceGenerator
                                                SeparatedList(
                                                     new AttributeSyntax[] {
                                                        Attribute(ParseName("Preserve")),
-                                                       Attribute(ParseName("EditorBrowsable"), ParseAttributeArgumentList("(EditorBrowsableState.Never)"))
+                                                       Attribute(ParseName("EditorBrowsable"), ParseAttributeArgumentList("(EditorBrowsableState.Never)")),
+                                                       Attribute(IdentifierName("Obsolete"))
+                                                        .WithArgumentList(
+                                                            AttributeArgumentList(
+                                                                SeparatedList<AttributeArgumentSyntax>(
+                                                                    new SyntaxNodeOrToken[]
+                                                                    {
+                                                                        AttributeArgument(
+                                                                            LiteralExpression(
+                                                                                SyntaxKind.StringLiteralExpression,
+                                                                                Literal("This method is reserved for exclusive use by the omni source generator."))),
+                                                                        Token(SyntaxKind.CommaToken),
+                                                                        AttributeArgument(
+                                                                            LiteralExpression(SyntaxKind.TrueLiteralExpression))
+                                                                    }
+                                                                )
+                                                            )
+                                                        )
                                                   }
                                                )
                                             )
@@ -434,7 +451,7 @@ namespace OmniNetSourceGenerator
                 )
             ));
 
-            return MethodDeclaration(method.ReturnType, Identifier("__" + method.Identifier.Text))
+            return MethodDeclaration(method.ReturnType, Identifier(GenHelper.GenerateMethodName()))
             .WithModifiers(TokenList(Token(SyntaxKind.ProtectedKeyword)))
             .WithAttributeLists(
             SingletonList(
@@ -453,7 +470,24 @@ namespace OmniNetSourceGenerator
                    SeparatedList(
                         new AttributeSyntax[] {
                            Attribute(ParseName("Preserve")),
-                           Attribute(ParseName("EditorBrowsable"), ParseAttributeArgumentList("(EditorBrowsableState.Never)"))
+                           Attribute(ParseName("EditorBrowsable"), ParseAttributeArgumentList("(EditorBrowsableState.Never)")),
+                           Attribute(IdentifierName("Obsolete"))
+                           .WithArgumentList(
+                               AttributeArgumentList(
+                                   SeparatedList<AttributeArgumentSyntax>(
+                                       new SyntaxNodeOrToken[]
+                                       {
+                                           AttributeArgument(
+                                               LiteralExpression(
+                                                   SyntaxKind.StringLiteralExpression,
+                                                   Literal("This method is reserved for exclusive use by the omni source generator."))),
+                                           Token(SyntaxKind.CommaToken),
+                                           AttributeArgument(
+                                               LiteralExpression(SyntaxKind.TrueLiteralExpression))
+                                       }
+                                   )
+                               )
+                           )
                       }
                    )
                 )

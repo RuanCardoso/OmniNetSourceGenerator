@@ -6,9 +6,9 @@ using SourceGenerator.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Text;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 // Generate serializer and deserialize methods.
 // override ___OnPropertyChanged___ and etc.
@@ -248,10 +248,10 @@ namespace OmniNetSourceGenerator
 
 											if (typeString.StartsWith("ObservableDictionary") || typeString.StartsWith("ObservableList"))
 											{
-												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnItemAdded += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
-												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnItemRemoved += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
-												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnItemUpdated += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
-												onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{identifierName}.OnUpdate += (isSend) => {{if(isSend) Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);}};"));
+												onNotifyCollectionHandlers.Add(ParseStatement($"{identifierName}.OnItemAdded += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
+												onNotifyCollectionHandlers.Add(ParseStatement($"{identifierName}.OnItemRemoved += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
+												onNotifyCollectionHandlers.Add(ParseStatement($"{identifierName}.OnItemUpdated += (_, _) => Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);"));
+												onNotifyCollectionHandlers.Add(ParseStatement($"{identifierName}.OnUpdate += (isSend) => {{if(isSend) Sync{identifierName}({identifierName}Options ?? DefaultNetworkVariableOptions);}};"));
 											}
 
 											if (!isDelegate)
@@ -306,10 +306,10 @@ namespace OmniNetSourceGenerator
 
 												if (typeString.StartsWith("ObservableDictionary") || typeString.StartsWith("ObservableList"))
 												{
-													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnItemAdded += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
-													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnItemRemoved += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
-													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnItemUpdated += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
-													onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"{variableName}.OnUpdate += (isSend) => {{if(isSend) Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);}};"));
+													onNotifyCollectionHandlers.Add(ParseStatement($"{variableName}.OnItemAdded += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
+													onNotifyCollectionHandlers.Add(ParseStatement($"{variableName}.OnItemRemoved += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
+													onNotifyCollectionHandlers.Add(ParseStatement($"{variableName}.OnItemUpdated += (_, _) => Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);"));
+													onNotifyCollectionHandlers.Add(ParseStatement($"{variableName}.OnUpdate += (isSend) => {{if(isSend) Sync{variableName}({variableName}Options ?? DefaultNetworkVariableOptions);}};"));
 												}
 
 												if (!isDelegate)
@@ -321,93 +321,148 @@ namespace OmniNetSourceGenerator
 										}
 									}
 
-									MethodDeclarationSyntax onServerPropertyChanged = CreatePropertyMethod($"___OnServerPropertyChanged___{parentClass.Identifier.Text}___", "Server")
+									MethodDeclarationSyntax onServerPropertyChanged = CreatePropertyMethod("Server")
 										.WithParameterList(
-											SyntaxFactory.ParameterList(
-												SyntaxFactory.SeparatedList(
+											ParameterList(
+												SeparatedList(
 													new ParameterSyntax[]
 													{
-														SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataBuffer buffer")),
-														SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer"))
+														Parameter(Identifier("DataBuffer buffer")),
+														Parameter(Identifier("NetworkPeer peer"))
 													}
 												)
 											)
-										).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement("___OnPropertyChanged___(default, default, peer, buffer);")));
+										).WithBody(Block(ParseStatement("___OnPropertyChanged___(default, default, peer, buffer);")));
 
-									MethodDeclarationSyntax onClientPropertyChanged = CreatePropertyMethod($"___OnClientPropertyChanged___{parentClass.Identifier.Text}___", "Client")
+									MethodDeclarationSyntax onClientPropertyChanged = CreatePropertyMethod("Client")
 										.WithParameterList(
-											SyntaxFactory.ParameterList(
-												SyntaxFactory.SeparatedList(
+											ParameterList(
+												SeparatedList(
 													new ParameterSyntax[]
 													{
-														SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataBuffer buffer")),
+														Parameter(Identifier("DataBuffer buffer")),
 													}
 												)
 											)
-										).WithBody(SyntaxFactory.Block(SyntaxFactory.ParseStatement("___OnPropertyChanged___(default, default, default, buffer);")));
+										).WithBody(Block(ParseStatement("___OnPropertyChanged___(default, default, default, buffer);")));
 
-									MethodDeclarationSyntax onPropertyChanged = SyntaxFactory
-										.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "___OnPropertyChanged___")
+									MethodDeclarationSyntax onPropertyChanged =
+										MethodDeclaration(ParseTypeName("void"), "___OnPropertyChanged___")
 										.WithModifiers(
-											SyntaxFactory.TokenList(
-												SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
-												SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
+											TokenList(
+												Token(SyntaxKind.ProtectedKeyword),
+												Token(SyntaxKind.OverrideKeyword)
 											)
 										)
 										.WithParameterList(
-											SyntaxFactory.ParameterList(
-												SyntaxFactory.SeparatedList(
+											ParameterList(
+												SeparatedList(
 													new ParameterSyntax[]
 													{
-														SyntaxFactory.Parameter(SyntaxFactory.Identifier("string propertyName")),
-														SyntaxFactory.Parameter(SyntaxFactory.Identifier("byte propertyId")),
-														SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer")),
-														SyntaxFactory.Parameter(SyntaxFactory.Identifier("DataBuffer buffer"))
+														Parameter(Identifier("string propertyName")),
+														Parameter(Identifier("byte propertyId")),
+														Parameter(Identifier("NetworkPeer peer")),
+														Parameter(Identifier("DataBuffer buffer"))
 													}
 												)
 											)
-										).WithBody(
-										SyntaxFactory.Block(SyntaxFactory.ParseStatement("propertyId = buffer.Read<byte>();"),
-										SyntaxFactory.SwitchStatement(SyntaxFactory.ParseExpression("propertyId")).WithSections(SyntaxFactory.List(sections)),
-										SyntaxFactory.ParseStatement("buffer.SeekToBegin();"),
-										SyntaxFactory.ParseStatement("base.___OnPropertyChanged___(propertyName, propertyId, peer, buffer);")));
+										).WithAttributeLists(
+											SingletonList<AttributeListSyntax>(
+												AttributeList(
+													SingletonSeparatedList<AttributeSyntax>(
+														Attribute(
+															IdentifierName("Obsolete"))
+														.WithArgumentList(
+															AttributeArgumentList(
+																SeparatedList<AttributeArgumentSyntax>(
+																	new SyntaxNodeOrToken[]{
+																		AttributeArgument(
+																			LiteralExpression(
+																				SyntaxKind.StringLiteralExpression,
+																				Literal("This method is reserved for exclusive use by the omni source generator."))),
+																		Token(SyntaxKind.CommaToken),
+																		AttributeArgument(
+																			LiteralExpression(
+																				SyntaxKind.FalseLiteralExpression))})))))))
+																													.WithBody(
+																													Block(ParseStatement("propertyId = buffer.Read<byte>();"),
+																													SwitchStatement(ParseExpression("propertyId")).WithSections(List(sections)),
+																													ParseStatement("buffer.SeekToBegin();"),
+																													ParseStatement("base.___OnPropertyChanged___(propertyName, propertyId, peer, buffer);")));
 
-									onNotifyCollectionHandlers.Add(SyntaxFactory.ParseStatement($"base.___NotifyCollectionChange___();"));
+									onNotifyCollectionHandlers.Add(ParseStatement($"base.___NotifyCollectionChange___();"));
 
-									MethodDeclarationSyntax onNotifyCollectionChange = SyntaxFactory
-										.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "___NotifyCollectionChange___")
+									MethodDeclarationSyntax onNotifyCollectionChange =
+										MethodDeclaration(ParseTypeName("void"), "___NotifyCollectionChange___")
 										.WithModifiers(
-											SyntaxFactory.TokenList(
-												SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
-												SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
+											TokenList(
+												Token(SyntaxKind.ProtectedKeyword),
+												Token(SyntaxKind.OverrideKeyword)
 											)
-										).WithBody(SyntaxFactory.Block(SyntaxFactory.List(onNotifyCollectionHandlers)));
+										).WithAttributeLists(
+											SingletonList<AttributeListSyntax>(
+												AttributeList(
+													SingletonSeparatedList<AttributeSyntax>(
+														Attribute(
+															IdentifierName("Obsolete"))
+														.WithArgumentList(
+															AttributeArgumentList(
+																SeparatedList<AttributeArgumentSyntax>(
+																	new SyntaxNodeOrToken[]{
+																		AttributeArgument(
+																			LiteralExpression(
+																				SyntaxKind.StringLiteralExpression,
+																				Literal("This method is reserved for exclusive use by the omni source generator."))),
+																		Token(SyntaxKind.CommaToken),
+																		AttributeArgument(
+																			LiteralExpression(
+																				SyntaxKind.FalseLiteralExpression))})))))))
+										.WithBody(Block(List(onNotifyCollectionHandlers)));
 
-									onNotifyInitialStateHandlers.Add(SyntaxFactory.ParseStatement($"base.SyncNetworkState(peer);"));
+									onNotifyInitialStateHandlers.Add(ParseStatement($"base.SyncNetworkState(peer);"));
 
-									MethodDeclarationSyntax onNotifyInitialStateUpdate = SyntaxFactory
-										.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "SyncNetworkState")
+									MethodDeclarationSyntax onNotifyInitialStateUpdate =
+										MethodDeclaration(ParseTypeName("void"), "SyncNetworkState")
 										.WithModifiers(
-											SyntaxFactory.TokenList(
-												SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
-												SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
+											TokenList(
+												Token(SyntaxKind.ProtectedKeyword),
+												Token(SyntaxKind.OverrideKeyword)
 											)
-										).WithParameterList(SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(
+										).WithParameterList(ParameterList(SeparatedList(
 											new ParameterSyntax[] {
-											SyntaxFactory.Parameter(SyntaxFactory.Identifier("NetworkPeer peer"))
+											Parameter(Identifier("NetworkPeer peer"))
 										})))
-										.WithBody(SyntaxFactory.Block(SyntaxFactory.List(onNotifyInitialStateHandlers)));
+										.WithBody(Block(List(onNotifyInitialStateHandlers)));
 
-									networkVariablesRegister.Add(SyntaxFactory.ParseStatement("base.___RegisterNetworkVariables___();"));
+									networkVariablesRegister.Add(ParseStatement("base.___RegisterNetworkVariables___();"));
 
-									MethodDeclarationSyntax onRegisterNetworkVariables = SyntaxFactory
-										.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), "___RegisterNetworkVariables___")
+									MethodDeclarationSyntax onRegisterNetworkVariables =
+										MethodDeclaration(ParseTypeName("void"), "___RegisterNetworkVariables___")
 										.WithModifiers(
-											SyntaxFactory.TokenList(
-												SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
-												SyntaxFactory.Token(SyntaxKind.OverrideKeyword)
+											TokenList(
+												Token(SyntaxKind.ProtectedKeyword),
+												Token(SyntaxKind.OverrideKeyword)
 											)
-										).WithBody(SyntaxFactory.Block(SyntaxFactory.List(networkVariablesRegister)));
+										)
+										.WithAttributeLists(
+											SingletonList<AttributeListSyntax>(
+												AttributeList(
+													SingletonSeparatedList<AttributeSyntax>(
+														Attribute(
+															IdentifierName("Obsolete"))
+														.WithArgumentList(
+															AttributeArgumentList(
+																SeparatedList<AttributeArgumentSyntax>(
+																	new SyntaxNodeOrToken[]{
+																		AttributeArgument(
+																			LiteralExpression(
+																				SyntaxKind.StringLiteralExpression,
+																				Literal("This method is reserved for exclusive use by the omni source generator."))),
+																		Token(SyntaxKind.CommaToken),
+																		AttributeArgument(
+																			LiteralExpression(
+																				SyntaxKind.FalseLiteralExpression))})))))))
+										.WithBody(Block(List(networkVariablesRegister)));
 
 									parentClass = parentClass.AddMembers(
 										onServerPropertyChanged,
@@ -499,29 +554,29 @@ namespace OmniNetSourceGenerator
 			var argumentList = new SeparatedSyntaxList<ParameterSyntax>();
 			var defaultArgs = new ParameterSyntax[]
 			{
-				SyntaxFactory.Parameter(SyntaxFactory.Identifier($"options"))
-					.WithType(SyntaxFactory.ParseTypeName("NetworkVariableOptions"))
-					.WithDefault(SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression))),
-				SyntaxFactory.Parameter(SyntaxFactory.Identifier($"invokeLocally"))
-					.WithType(SyntaxFactory.ParseTypeName("bool"))
-					.WithDefault(SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression))),
+				Parameter(Identifier($"options"))
+					.WithType(ParseTypeName("NetworkVariableOptions"))
+					.WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.NullLiteralExpression))),
+				Parameter(Identifier($"invokeLocally"))
+					.WithType(ParseTypeName("bool"))
+					.WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.FalseLiteralExpression))),
 			};
 
 			var statements = new List<StatementSyntax>
 			{
-				SyntaxFactory.ParseStatement($"options ??= DefaultNetworkVariableOptions;"),
-				SyntaxFactory.ParseStatement("using var buffer = NetworkManager.Pool.Rent(enableTracking: false);")
+				ParseStatement($"options ??= DefaultNetworkVariableOptions;"),
+				ParseStatement("using var buffer = NetworkManager.Pool.Rent(enableTracking: false);")
 			};
 
 			#region Invoke Arguments
 			for (int i = 0; i < args.Length; i++)
 			{
 				ITypeSymbol arg = args[i];
-				var parameter = SyntaxFactory.Parameter(SyntaxFactory.Identifier($"arg{i}"))
-					.WithType(SyntaxFactory.ParseTypeName(arg.ToString()));
+				var parameter = Parameter(Identifier($"arg{i}"))
+					.WithType(ParseTypeName(arg.ToString()));
 
 				argumentList = argumentList.Add(parameter);
-				statements.Add(SyntaxFactory.ParseStatement($"buffer.WriteAsBinary({parameter.Identifier.Text});"));
+				statements.Add(ParseStatement($"buffer.WriteAsBinary({parameter.Identifier.Text});"));
 			}
 
 			argumentList = argumentList.AddRange(defaultArgs);
@@ -530,69 +585,69 @@ namespace OmniNetSourceGenerator
 			#region Method Body
 			statements.Add(
 				baseClassName == "NetworkBehaviour"
-					? SyntaxFactory
-						.IfStatement(
-							SyntaxFactory.ParseExpression("IsClient"),
-							SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Client.NetworkVariableSync(buffer, {propertyId}, options);"))
+					?
+						IfStatement(
+							ParseExpression("IsClient"),
+							Block(ParseStatement($"Client.NetworkVariableSync(buffer, {propertyId}, options);"))
 						)
 						.WithElse(
-							SyntaxFactory.ElseClause(
-								SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSync(buffer, {propertyId}, options);"))
+							ElseClause(
+								Block(ParseStatement($"Server.NetworkVariableSync(buffer, {propertyId}, options);"))
 							)
 						)
-					: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync(buffer, {propertyId}, options);")
-					: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync(buffer, {propertyId}, options);")
-					: baseClassName == "DualBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync(buffer, {propertyId}, options);")
+					: baseClassName == "ServerBehaviour" ? ParseStatement($"Server.NetworkVariableSync(buffer, {propertyId}, options);")
+					: baseClassName == "ClientBehaviour" ? ParseStatement($"Client.NetworkVariableSync(buffer, {propertyId}, options);")
+					: baseClassName == "DualBehaviour" ? ParseStatement($"Server.NetworkVariableSync(buffer, {propertyId}, options);")
 					: GenHelper.EmptyStatement());
 
-			statements.Add(SyntaxFactory.IfStatement(
-				SyntaxFactory.ParseExpression("invokeLocally"),
-				SyntaxFactory.ParseStatement($"m_{propertyName}?.Invoke({string.Join(", ", Enumerable.Range(0, args.Length).Select(i => $"arg{i}"))});"))
+			statements.Add(IfStatement(
+				ParseExpression("invokeLocally"),
+				ParseStatement($"m_{propertyName}?.Invoke({string.Join(", ", Enumerable.Range(0, args.Length).Select(i => $"arg{i}"))});"))
 			);
 			#endregion
 
-			return SyntaxFactory
-				.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), $"{propertyName}")
-				.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+			return
+				MethodDeclaration(ParseTypeName("void"), $"{propertyName}")
+				.WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
 				.WithParameterList(
-					SyntaxFactory.ParameterList(argumentList)
+					ParameterList(argumentList)
 				)
-				.WithBody(SyntaxFactory.Block(statements));
+				.WithBody(Block(statements));
 		}
 
 		private MethodDeclarationSyntax CreateSyncMethod(string propertyName, string propertyId, string baseClassName)
 		{
-			return SyntaxFactory
-				.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), $"Sync{propertyName}")
-				.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
+			return
+				MethodDeclaration(ParseTypeName("void"), $"Sync{propertyName}")
+				.WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
 				.WithParameterList(
-					SyntaxFactory.ParameterList(
-						SyntaxFactory.SeparatedList(
+					ParameterList(
+						SeparatedList(
 							new ParameterSyntax[]
 							{
-								SyntaxFactory.Parameter(SyntaxFactory.Identifier($"options")).WithType(SyntaxFactory.ParseTypeName("NetworkVariableOptions")).WithDefault(SyntaxFactory.EqualsValueClause(SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression))),
+								Parameter(Identifier($"options")).WithType(ParseTypeName("NetworkVariableOptions")).WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.NullLiteralExpression))),
 							}
 
 						)
 					)
 				)
 				.WithBody(
-					SyntaxFactory.Block(
-						SyntaxFactory.ParseStatement($"options ??= {propertyName}Options ?? DefaultNetworkVariableOptions;"),
+					Block(
+						ParseStatement($"options ??= {propertyName}Options ?? DefaultNetworkVariableOptions;"),
 						baseClassName == "NetworkBehaviour"
-							? SyntaxFactory
-								.IfStatement(
-									SyntaxFactory.ParseExpression("IsClient"),
-									SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({propertyName}, {propertyId}, options);"))
+							?
+								IfStatement(
+									ParseExpression("IsClient"),
+									Block(ParseStatement($"Client.NetworkVariableSync({propertyName}, {propertyId}, options);"))
 								)
 								.WithElse(
-									SyntaxFactory.ElseClause(
-										SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);"))
+									ElseClause(
+										Block(ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);"))
 									)
 								)
-							: baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);")
-							: baseClassName == "ClientBehaviour" ? SyntaxFactory.ParseStatement($"Client.NetworkVariableSync({propertyName}, {propertyId}, options);")
-							: baseClassName == "DualBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);")
+							: baseClassName == "ServerBehaviour" ? ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);")
+							: baseClassName == "ClientBehaviour" ? ParseStatement($"Client.NetworkVariableSync({propertyName}, {propertyId}, options);")
+							: baseClassName == "DualBehaviour" ? ParseStatement($"Server.NetworkVariableSync({propertyName}, {propertyId}, options);")
 							: GenHelper.EmptyStatement()
 					)
 				);
@@ -601,62 +656,62 @@ namespace OmniNetSourceGenerator
 		private StatementSyntax CreateSyncInitialState(string propertyName, string propertyId, string baseClassName) // Only Server
 		{
 			return baseClassName == "NetworkBehaviour"
-				 ? SyntaxFactory
-					 .IfStatement(
-						 SyntaxFactory.ParseExpression("IsServer"),
-						 SyntaxFactory.Block(SyntaxFactory.ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);"))
+				 ?
+					 IfStatement(
+						 ParseExpression("IsServer"),
+						 Block(ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);"))
 					 )
-				 : baseClassName == "ServerBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);")
-				 : baseClassName == "DualBehaviour" ? SyntaxFactory.ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);")
+				 : baseClassName == "ServerBehaviour" ? ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);")
+				 : baseClassName == "DualBehaviour" ? ParseStatement($"Server.NetworkVariableSyncToPeer({propertyName}, {propertyId}, peer);")
 				 : GenHelper.EmptyStatement();
 		}
 
 		private StatementSyntax CreateRegisterNetworkVariable(string propertyName, byte propertyId, bool requiresOwnership,
 			bool isClientAuthority, bool checkEquality, string deliveryMode, string target, byte sequenceChannel) // Only Server
 		{
-			return SyntaxFactory.ParseStatement(
+			return ParseStatement(
 				$"___RegisterNetworkVariable___(\"{propertyName}\", {propertyId}, {(requiresOwnership ? "true" : "false")}, {(isClientAuthority ? "true" : "false")}, {(checkEquality ? "true" : "false")}, {deliveryMode}, {target}, {sequenceChannel});"
 			);
 		}
 
 		private MethodDeclarationSyntax CreatePartialHandler(string propertyName, TypeSyntax type)
 		{
-			return SyntaxFactory
-				.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), $"On{propertyName}Changed")
-				.WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PartialKeyword)))
+			return
+				MethodDeclaration(ParseTypeName("void"), $"On{propertyName}Changed")
+				.WithModifiers(TokenList(Token(SyntaxKind.PartialKeyword)))
 				.WithParameterList(
-					SyntaxFactory.ParameterList(
-						SyntaxFactory.SeparatedList(
+					ParameterList(
+						SeparatedList(
 							new ParameterSyntax[]
 							{
-								SyntaxFactory.Parameter(SyntaxFactory.Identifier($"prev{propertyName}")).WithType(type),
-								SyntaxFactory.Parameter(SyntaxFactory.Identifier($"next{propertyName}")).WithType(type),
-								SyntaxFactory.Parameter(SyntaxFactory.Identifier("isWriting")).WithType(SyntaxFactory.ParseTypeName("bool"))
+								Parameter(Identifier($"prev{propertyName}")).WithType(type),
+								Parameter(Identifier($"next{propertyName}")).WithType(type),
+								Parameter(Identifier("isWriting")).WithType(ParseTypeName("bool"))
 							}
 						)
 					)
-				).WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+				).WithSemicolonToken(Token(SyntaxKind.SemicolonToken));
 		}
 
 		private MethodDeclarationSyntax CreateVirtualHandler(string propertyName, TypeSyntax type)
 		{
-			return SyntaxFactory
-				.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), $"OnBase{propertyName}Changed")
+			return
+				MethodDeclaration(ParseTypeName("void"), $"OnBase{propertyName}Changed")
 				.WithModifiers(
-					SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword), SyntaxFactory.Token(SyntaxKind.VirtualKeyword))
+					TokenList(Token(SyntaxKind.ProtectedKeyword), Token(SyntaxKind.VirtualKeyword))
 				)
 				.WithParameterList(
-					SyntaxFactory.ParameterList(
-						SyntaxFactory.SeparatedList(
+					ParameterList(
+						SeparatedList(
 							new ParameterSyntax[]
 							{
-								SyntaxFactory.Parameter(SyntaxFactory.Identifier($"prev{propertyName}")).WithType(type),
-								SyntaxFactory.Parameter(SyntaxFactory.Identifier($"next{propertyName}")).WithType(type),
-								SyntaxFactory.Parameter(SyntaxFactory.Identifier("isWriting")).WithType(SyntaxFactory.ParseTypeName("bool"))
+								Parameter(Identifier($"prev{propertyName}")).WithType(type),
+								Parameter(Identifier($"next{propertyName}")).WithType(type),
+								Parameter(Identifier("isWriting")).WithType(ParseTypeName("bool"))
 							}
 						)
 					)
-				).WithBody(SyntaxFactory.Block());
+				).WithBody(Block());
 		}
 
 		private SwitchSectionSyntax CreateDelegateSection(
@@ -671,45 +726,45 @@ namespace OmniNetSourceGenerator
 		{
 			var statements = new List<StatementSyntax>()
 			{
-				SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
+				ParseStatement($"propertyName = \"{propertyName}\";"),
 			};
 
 			for (int i = 0; i < args.Length; i++)
 			{
-				statements.Add(SyntaxFactory.ParseStatement($"var arg{i} = buffer.ReadAsBinary<{args[i]}>();"));
+				statements.Add(ParseStatement($"var arg{i} = buffer.ReadAsBinary<{args[i]}>();"));
 			}
 
-			statements.Add(SyntaxFactory.ParseStatement($"m_{propertyName}?.Invoke({string.Join(", ", Enumerable.Range(0, args.Length).Select(i => $"arg{i}"))});"));
-			statements.Add(SyntaxFactory.BreakStatement());
+			statements.Add(ParseStatement($"m_{propertyName}?.Invoke({string.Join(", ", Enumerable.Range(0, args.Length).Select(i => $"arg{i}"))});"));
+			statements.Add(BreakStatement());
 
 			return !isSerializable
-				? SyntaxFactory.SwitchSection(
-					SyntaxFactory.List(
+				? SwitchSection(
+					List(
 						new SwitchLabelSyntax[]
 						{
-							SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(caseExpression))
+							CaseSwitchLabel(ParseExpression(caseExpression))
 						}
 					),
-					SyntaxFactory.List(
+					List(
 						new StatementSyntax[]
 						{
-							SyntaxFactory.Block(statements),
+							Block(statements),
 						}
 					)
 				) // Start of deserialize
-				: SyntaxFactory.SwitchSection(
-					SyntaxFactory.List(
+				: SwitchSection(
+					List(
 						new SwitchLabelSyntax[]
 						{
-							SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(caseExpression))
+							CaseSwitchLabel(ParseExpression(caseExpression))
 						}
 					),
-					SyntaxFactory.List(
+					List(
 						new StatementSyntax[]
 						{
-							SyntaxFactory.Block(
-								SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
-								SyntaxFactory.BreakStatement()
+							Block(
+								ParseStatement($"propertyName = \"{propertyName}\";"),
+								BreakStatement()
 							),
 						}
 					)
@@ -727,103 +782,117 @@ namespace OmniNetSourceGenerator
 		)
 		{
 			return !isSerializable
-				? SyntaxFactory.SwitchSection(
-					SyntaxFactory.List(
+				? SwitchSection(
+					List(
 						new SwitchLabelSyntax[]
 						{
-							SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(caseExpression))
+							CaseSwitchLabel(ParseExpression(caseExpression))
 						}
 					),
-					SyntaxFactory.List(
+					List(
 						new StatementSyntax[]
 						{
-							SyntaxFactory.Block(
-								SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
-								SyntaxFactory.ParseStatement($"var nextValue = buffer.ReadAsBinary<{propertyType}>();"),
-								SyntaxFactory.IfStatement(
-									SyntaxFactory.ParseExpression($"!OnNetworkVariableDeepEquals(m_{propertyName}, nextValue, propertyName, {caseExpression})"),
-									SyntaxFactory.Block(
-										SyntaxFactory.IfStatement(
-											SyntaxFactory.ParseExpression($"{determinedValue} && {isServerBroadcastsClientUpdates}"),
-											SyntaxFactory.Block(
-												SyntaxFactory.ParseStatement($"Sync{propertyName}();")
+							Block(
+								ParseStatement($"propertyName = \"{propertyName}\";"),
+								ParseStatement($"var nextValue = buffer.ReadAsBinary<{propertyType}>();"),
+								IfStatement(
+									ParseExpression($"!OnNetworkVariableDeepEquals(m_{propertyName}, nextValue, propertyName, {caseExpression})"),
+									Block(
+										IfStatement(
+											ParseExpression($"{determinedValue} && {isServerBroadcastsClientUpdates}"),
+											Block(
+												ParseStatement($"Sync{propertyName}();")
 											)
 										),
-										SyntaxFactory.ParseStatement($"On{propertyName}Changed(m_{propertyName}, nextValue, false);"),
-										SyntaxFactory.ParseStatement($"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"),
+										ParseStatement($"On{propertyName}Changed(m_{propertyName}, nextValue, false);"),
+										ParseStatement($"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"),
 										(propertyType.StartsWith("ObservableDictionary") || propertyType.StartsWith("ObservableList"))
-											? SyntaxFactory.ParseStatement("nextValue.OnUpdate?.Invoke(false);")
+											? ParseStatement("nextValue.OnUpdate?.Invoke(false);")
 											: GenHelper.EmptyStatement(),
-										SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;")
+										ParseStatement($"m_{propertyName} = nextValue;")
 									),
-									SyntaxFactory.ElseClause(
-										SyntaxFactory.Block(
-											SyntaxFactory.ParseStatement("return;")
+									ElseClause(
+										Block(
+											ParseStatement("return;")
 										)
 									)
 								),
-								SyntaxFactory.BreakStatement()
+								BreakStatement()
 							),
 						}
 					)
 				) // Start of deserialize
-				: SyntaxFactory.SwitchSection(
-					SyntaxFactory.List(
+				: SwitchSection(
+					List(
 						new SwitchLabelSyntax[]
 						{
-							SyntaxFactory.CaseSwitchLabel(SyntaxFactory.ParseExpression(caseExpression))
+							CaseSwitchLabel(ParseExpression(caseExpression))
 						}
 					),
-					SyntaxFactory.List(
+					List(
 						new StatementSyntax[]
 						{
-							SyntaxFactory.Block(
-								SyntaxFactory.ParseStatement($"propertyName = \"{propertyName}\";"),
-								SyntaxFactory.ParseStatement("using var nBuffer = NetworkManager.Pool.Rent(enableTracking: false);"),
-								SyntaxFactory.ParseStatement("nBuffer.Write(buffer.GetSpan().Slice(0, buffer.Length)); // from current position to end > skip propertyId(header)"),
-								SyntaxFactory.ParseStatement($"nBuffer.SeekToBegin();"),
+							Block(
+								ParseStatement($"propertyName = \"{propertyName}\";"),
+								ParseStatement("using var nBuffer = NetworkManager.Pool.Rent(enableTracking: false);"),
+								ParseStatement("nBuffer.Write(buffer.GetSpan().Slice(0, buffer.Length)); // from current position to end > skip propertyId(header)"),
+								ParseStatement($"nBuffer.SeekToBegin();"),
 								isSerializableWithPeer
-									? SyntaxFactory.ParseStatement($"var nextValue = nBuffer.Deserialize<{propertyType}>(peer != null ? peer : NetworkManager.LocalPeer, {determinedValue});")
-									: SyntaxFactory.ParseStatement($"var nextValue = nBuffer.Deserialize<{propertyType}>();"),
-								SyntaxFactory.ParseStatement($"On{propertyName}Changed(m_{propertyName}, nextValue, false);"),
-								SyntaxFactory.ParseStatement($"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"),
-								SyntaxFactory.ParseStatement($"m_{propertyName} = nextValue;"),
-								SyntaxFactory.BreakStatement()
+									? ParseStatement($"var nextValue = nBuffer.Deserialize<{propertyType}>(peer != null ? peer : NetworkManager.LocalPeer, {determinedValue});")
+									: ParseStatement($"var nextValue = nBuffer.Deserialize<{propertyType}>();"),
+								ParseStatement($"On{propertyName}Changed(m_{propertyName}, nextValue, false);"),
+								ParseStatement($"OnBase{propertyName}Changed(m_{propertyName}, nextValue, false);"),
+								ParseStatement($"m_{propertyName} = nextValue;"),
+								BreakStatement()
 							),
 						}
 					)
 				);
 		}
 
-		private MethodDeclarationSyntax CreatePropertyMethod(string methodName, string attributeName)
+		private MethodDeclarationSyntax CreatePropertyMethod(string attributeName)
 		{
-			MethodDeclarationSyntax onPropertyChanged = SyntaxFactory
-				.MethodDeclaration(SyntaxFactory.ParseTypeName("void"), methodName)
+			MethodDeclarationSyntax onPropertyChanged = MethodDeclaration(ParseTypeName("void"), GenHelper.GenerateMethodName())
 				.WithAttributeLists(
-					SyntaxFactory.List(
+					List(
 						new AttributeListSyntax[]
 						{
-							SyntaxFactory.AttributeList(
-								SyntaxFactory.SingletonSeparatedList(
-									SyntaxFactory
-										.Attribute(SyntaxFactory.IdentifierName(attributeName))
+							AttributeList(
+								SingletonSeparatedList(
+										Attribute(IdentifierName(attributeName))
 										.WithArgumentList(
-											SyntaxFactory.AttributeArgumentList(
-												SyntaxFactory.SeparatedList(
+											AttributeArgumentList(
+												SeparatedList(
 													new AttributeArgumentSyntax[]
 													{
-														SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression("255")),
+														AttributeArgument(ParseExpression("255")),
 													}
 												)
 											)
 										)
 								)
-							)
+							),
+							AttributeList(
+							SingletonSeparatedList<AttributeSyntax>(
+								Attribute(
+									IdentifierName("Obsolete"))
+								.WithArgumentList(
+									AttributeArgumentList(
+										SeparatedList<AttributeArgumentSyntax>(
+											new SyntaxNodeOrToken[]{
+												AttributeArgument(
+													LiteralExpression(
+														SyntaxKind.StringLiteralExpression,
+														Literal("This method is reserved for exclusive use by the omni source generator."))),
+												Token(SyntaxKind.CommaToken),
+												AttributeArgument(
+													LiteralExpression(
+														SyntaxKind.TrueLiteralExpression))})))))
 						}
 					)
 				)
 				.WithModifiers(
-					SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword))
+					TokenList(Token(SyntaxKind.ProtectedKeyword))
 				);
 
 			return onPropertyChanged;

@@ -87,7 +87,7 @@ public partial class TestsRPC : TestsRPCBase
 	[Client]
 	void Crouch()
 	{
-
+		
 	}
 
 	[Client]

@@ -164,6 +164,11 @@ namespace SourceGenerator.Helpers
 #endif
 		}
 
+		public static string GenerateMethodName()
+		{
+			return "__omni_" + Guid.NewGuid().ToString("N");
+		}
+
 		public static bool IsManualRpc(MethodDeclarationSyntax method)
 		{
 			var parameter = method.ParameterList.Parameters.FirstOrDefault();
