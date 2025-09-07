@@ -65,7 +65,9 @@ namespace OmniNetSourceGenerator
                     sbClass.AppendLine("{");
                     sbClass.AppendLine($"    public const string __Internal__Key_Path__ = @\"{path}\";");
                     sbClass.AppendLine($"    internal static byte[] __Internal__Key__ => {keysClass.Identifier.Text}.{RandomField().Identifier.Text};");
+                    sbClass.AppendLine("#if OMNI_SERVER || UNITY_EDITOR");
                     sbClass.AppendLine($"    internal static byte[] __Internal__SecretKey__ => {keysClass.Identifier.Text}.{RandomField().Identifier.Text};");
+                    sbClass.AppendLine("#endif");
                     sbClass.AppendLine("}");
                     sbClass.AppendLine();
                     sbClass.Append(keysClass.NormalizeWhitespace().ToString());
