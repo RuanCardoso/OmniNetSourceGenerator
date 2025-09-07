@@ -67,6 +67,7 @@ public partial class TestsRPCBase : TestsRPCBaseeBase
 	}
 }
 
+[GenerateSecureKeys]
 public partial class TestsRPC : TestsRPCBase
 {
 	[NetworkVariable]
@@ -87,7 +88,7 @@ public partial class TestsRPC : TestsRPCBase
 	[Client]
 	void Crouch()
 	{
-		
+
 	}
 
 	[Client]

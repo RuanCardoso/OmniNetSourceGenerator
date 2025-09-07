@@ -54,14 +54,18 @@ namespace OmniNetSourceGenerator
                     for (int i = 0; i < 10; i++)
                         keysClass = keysClass.AddMembers(GenerateSecureRandomBytesField());
 
-                    var fields = keysClass.Members.OfType<FieldDeclarationSyntax>().ToArray();
-                    var randomField = fields[_random.Next(0, fields.Length)];
-                    var fieldVariable = randomField.Declaration.Variables[0];
+                    VariableDeclaratorSyntax RandomField()
+                    {
+                        var fields = keysClass.Members.OfType<FieldDeclarationSyntax>().ToArray();
+                        var randomField = fields[_random.Next(0, fields.Length)];
+                        return randomField.Declaration.Variables[0];
+                    }
 
                     sbClass.AppendLine($"{@class.Modifiers} class {@class.Identifier.Text}");
                     sbClass.AppendLine("{");
                     sbClass.AppendLine($"    public const string __Internal__Key_Path__ = @\"{path}\";");
-                    sbClass.AppendLine($"    internal static byte[] __Internal__Key__ => {keysClass.Identifier.Text}.{fieldVariable.Identifier.Text};");
+                    sbClass.AppendLine($"    internal static byte[] __Internal__Key__ => {keysClass.Identifier.Text}.{RandomField().Identifier.Text};");
+                    sbClass.AppendLine($"    internal static byte[] __Internal__SecretKey__ => {keysClass.Identifier.Text}.{RandomField().Identifier.Text};");
                     sbClass.AppendLine("}");
                     sbClass.AppendLine();
                     sbClass.Append(keysClass.NormalizeWhitespace().ToString());
@@ -93,7 +97,7 @@ namespace OmniNetSourceGenerator
                         string date = currentCode[currentCode.Length - 1].Substring(3); // Skip the // and the space
                         if (DateTime.TryParse(date, out DateTime parsedDate))
                         {
-                            if (DateTime.UtcNow.Subtract(parsedDate).TotalMinutes < 10000d) // 10000 minutes = 7 days, the keys are valid for 7 days
+                            if (DateTime.UtcNow.Subtract(parsedDate).TotalMinutes < 525960d) // 1 year valid
                             {
                                 context.AddSource($"{@class.Identifier.Text}_keys_generated_code_.cs", string.Join("\n", currentCode));
                                 return;
