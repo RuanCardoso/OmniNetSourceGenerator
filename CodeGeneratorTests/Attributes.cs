@@ -124,13 +124,6 @@ namespace Omni.Core
 		}
 	}
 
-	public class EventRpc : Attribute
-	{
-		protected byte Id { get; set; }
-		public DeliveryMode DeliveryMode { get; set; } = DeliveryMode.ReliableOrdered;
-		public int SequenceChannel { get; set; } = 0;
-	}
-
 	public enum DeliveryMode : byte
 	{
 		/// <summary>
@@ -165,29 +158,94 @@ namespace Omni.Core
 		ReliableSequenced
 	}
 
-	public class Server : EventRpc
+	[AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
+	public class EventAttribute : Attribute
 	{
-		public Server()
-		{
-			Id = 0;
-		}
+		internal byte Id { get; }
 
-		public Server(byte id)
+		/// <summary>
+		/// Gets or sets the delivery mode for this RPC.
+		/// </summary>
+		/// <value>
+		/// Default is <c>ReliableOrdered</c>, ensuring the RPC is delivered reliably and in order.
+		/// </value>
+		public DeliveryMode DeliveryMode { get; set; } = DeliveryMode.ReliableOrdered;
+
+		/// <summary>
+		/// Gets or sets the sequence channel used for this RPC.
+		/// </summary>
+		/// <value>
+		/// Default is <c>0</c>. Different channels can be used to separate ordering concerns.
+		/// </value>
+		public byte SequenceChannel { get; set; } = 0;
+
+		public EventAttribute() { }
+		public EventAttribute(byte id)
 		{
-			Id = id;
+
 		}
 	}
 
-	public class ClientAttribute : EventRpc
+	/// <summary>
+	/// Marks a method as a client-side Remote Procedure Call (RPC) event.
+	/// </summary>
+	/// <remarks>
+	/// Use this attribute to indicate that a method is intended to handle RPCs sent to the client.
+	/// </remarks>
+	[AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
+	public class ClientAttribute : EventAttribute
 	{
-		public ClientAttribute() : this(0)
-		{
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ClientAttribute"/> class. with an automatically generated identifier.
+		/// </summary>
+		public ClientAttribute() { }
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ClientAttribute"/> class with the specified rpc ID.
+		/// </summary>
+		/// <param name="id">The unique identifier for the client-side RPC event.</param>
+		public ClientAttribute(byte id) : base(id)
+		{
 		}
+	}
 
-		public ClientAttribute(byte id)
+	/// <summary>
+	/// Marks a method as a server-side Remote Procedure Call (RPC) event.
+	/// </summary>
+	/// <remarks>
+	/// Use this attribute to indicate that a method is intended to handle RPCs sent to the server.
+	/// By default, ownership verification is required for the RPC to be accepted.
+	/// </remarks>
+	[AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
+	public class ServerAttribute : EventAttribute
+	{
+		/// <summary>
+		/// Gets or sets a value indicating whether ownership is required to invoke the server RPC.
+		/// </summary>
+		/// <value>
+		/// Default is <c>true</c>, meaning only the client with ownership can call this RPC.
+		/// </value>
+		public bool RequiresOwnership { get; set; } = true;
+
+		/// <summary>
+		/// Gets or sets the target for this server RPC.
+		/// </summary>
+		/// <value>
+		/// Default is <c>Target.Auto</c>, which automatically determines the appropriate target based on context.
+		/// </value>
+		public Target Target { get; set; } = Target.Auto;
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ServerAttribute"/> class. with an automatically generated identifier.
+		/// </summary>
+		public ServerAttribute() { }
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ServerAttribute"/> class with the specified rpc ID.
+		/// </summary>
+		/// <param name="id">The unique identifier for the server-side RPC event.</param>
+		public ServerAttribute(byte id) : base(id)
 		{
-			Id = id;
 		}
 	}
 
@@ -262,7 +320,7 @@ namespace Omni.Core
 		{
 			Id = 0;
 		}
-		
+
 		public NetworkVariableAttribute(byte id) { }
 	}
 

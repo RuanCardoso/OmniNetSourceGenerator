@@ -51,7 +51,7 @@ namespace OmniNetSourceGenerator
                             SyntaxFactory.Token(SyntaxKind.StaticKeyword)
                         );
 
-                    for (int i = 0; i < 10; i++)
+                    for (int i = 0; i < 20; i++)
                         keysClass = keysClass.AddMembers(GenerateSecureRandomBytesField());
 
                     VariableDeclaratorSyntax RandomField()

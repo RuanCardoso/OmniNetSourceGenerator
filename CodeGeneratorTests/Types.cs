@@ -633,9 +633,19 @@ namespace Omni.Core
 
 	public class LocalEventClient
 	{
-		public void SetRpcParameters(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered, int channel = 0)
+		public void SetRpcParameters(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered, byte channel = 0)
 		{
 
+		}
+
+		public void GetRpcParameters(byte rpcId, out DeliveryMode deliveryMode, out byte seqChannel)
+		{
+			deliveryMode = DeliveryMode.ReliableOrdered;
+			seqChannel = 0;
+		}
+
+		public void Rpc(byte rpcId, DataBuffer dataBuffer = null)
+		{
 		}
 
 		public void Rpc<T1>(byte rpcId, T1 p1)
@@ -814,9 +824,16 @@ namespace Omni.Core
 
 	public class LocalEventServer
 	{
-		public void SetRpcParameters(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered, Target target = Target.Auto, int channel = 0, bool requiresOwnership = true)
+		public void SetRpcParameters(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered, Target target = Target.Auto, byte channel = 0, bool requiresOwnership = true)
 		{
 
+		}
+
+		public void GetRpcParameters(byte rpcId, out DeliveryMode deliveryMode, out Target target, out byte seqChannel)
+		{
+			deliveryMode = DeliveryMode.ReliableOrdered;
+			target = Target.Auto;
+			seqChannel = 0;
 		}
 
 		public void RpcViaPeer(byte rpcId, NetworkPeer peer, DataBuffer message = null, NetworkGroup group = null)
@@ -1004,15 +1021,21 @@ namespace Omni.Core
 
 	public class StaticEventServer
 	{
-		public void SetRpcParameters(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered, Target target = Target.Auto, int channel = 0, bool requiresOwnership = true)
+		public void SetRpcParameters(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered, Target target = Target.Auto, byte channel = 0, bool requiresOwnership = true)
 		{
 
+		}
+
+		public void GetRpcParameters(byte rpcId, out DeliveryMode deliveryMode, out Target target, out byte seqChannel)
+		{
+			deliveryMode = DeliveryMode.ReliableOrdered;
+			target = Target.Auto;
+			seqChannel = 0;
 		}
 
 		public void Rpc(byte rpcId, NetworkPeer peer, DataBuffer buffer = null, NetworkGroup group = null)
 		{
 		}
-
 
 		public void Rpc<T1>(byte rpcId, NetworkPeer peer, T1 p1, NetworkGroup group = null)
 		{
@@ -1197,9 +1220,19 @@ namespace Omni.Core
 
 	public class StaticEventClient
 	{
-		public void SetRpcParameters(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered, int channel = 0)
+		public void SetRpcParameters(byte rpcId, DeliveryMode deliveryMode = DeliveryMode.ReliableOrdered, byte channel = 0)
 		{
 
+		}
+
+		public void GetRpcParameters(byte rpcId, out DeliveryMode deliveryMode, out byte seqChannel)
+		{
+			deliveryMode = DeliveryMode.ReliableOrdered;
+			seqChannel = 0;
+		}
+
+		public void Rpc(byte rpcId, DataBuffer dataBuffer = null)
+		{
 		}
 
 		public void Rpc<T1>(byte rpcId, T1 p1)

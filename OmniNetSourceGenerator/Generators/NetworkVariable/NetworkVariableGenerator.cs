@@ -206,6 +206,7 @@ namespace OmniNetSourceGenerator
 										var attribute = member.GetAttribute("NetworkVariable");
 										if (attribute != null)
 										{
+											// ArgumentIndex is ignored here because all parameters are optional and can be provided in any order.
 											currentId = attribute.GetArgumentValue<byte>("id", ArgumentIndex.First, classModel, 0);
 											requiresOwnership = attribute.GetArgumentValue<bool>("RequiresOwnership", ArgumentIndex.Second, classModel, true);
 											isClientAuthority = attribute.GetArgumentValue<bool>("IsClientAuthority", ArgumentIndex.Third, classModel, false);

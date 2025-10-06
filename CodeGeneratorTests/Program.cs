@@ -1,236 +1,38 @@
-﻿using System;
+﻿using System.ComponentModel.DataAnnotations;
 using Omni.Core;
 
 
-public partial class TestsRPCBaseeBase : NetworkBehaviour
+public class BB
 {
-	[NetworkVariable]
-	private float m_Darma, m_Koty, m_Ritu;
-
-	[NetworkVariable]
-	private float m_Baka, m_Tyro;
-
-
-	[Client]
-	public void Modsdsve()
-	{
-		
-	}
-
-	[Client]
-	void Jsdsump()
-	{
-
-	}
-
-	[Client]
-	void Atfdgtack()
-	{
-
-	}
-
-	[Client]
-	void Dehgfhgfhfend()
-	{
-
-	}
+	public const int a = 102;
 }
 
-public partial class TestsRPCBase : TestsRPCBaseeBase
+public partial class Player : NetworkBehaviour
 {
-
-	[NetworkVariable]
-	private float m_Vida, m_Mana;
-
-
-	[Client]
-	void Move()
-	{
-	}
-
-	[Client]
-	void Jump()
+	[Client(DeliveryMode = DeliveryMode.Sequenced, SequenceChannel = BB.a + 1)]
+	public void SetNick2(Channel channel)
 	{
 
 	}
 
-	[Client]
-	void Attack()
+
+	[Client(SequenceChannel = BB.a, DeliveryMode = DeliveryMode.Sequenced)]
+	public void SetNic3k2(Channel channel)
 	{
 
 	}
 
-	[Client]
-	void Defend()
-	{
 
-	}
-}
-
-[GenerateSecureKeys]
-public partial class TestsRPC : TestsRPCBase
-{
-	[NetworkVariable]
-	private float m_Lama;
-
-	[NetworkVariable(Target = Target.Self)]
-	private float m_Kama;
-
-	[NetworkVariable]
-	private float m_Dama, m_REYT;
-
-	[Client]
-	void Sprint(int a)
+	[Server(Target = Target.Self, RequiresOwnership = false, SequenceChannel = BB.a - 29, DeliveryMode = DeliveryMode.Sequenced)]
+	public void SetNick(Channel channel)
 	{
 
 	}
 
-	[Client]
-	void Crouch()
-	{
 
-	}
 
-	[Client]
-	void Reload()
-	{
-
-	}
-
-	[Client]
-	void Interact()
-	{
-
-	}
-
-	[Client]
-	void OpenInventory()
-	{
-
-	}
-
-	[Client]
-	void UseItem()
-	{
-
-	}
-
-	[Client]
-	void CastSpell()
-	{
-
-	}
-
-	[Client]
-	void ChangeWeapon()
-	{
-
-	}
-
-	[Client]
-	void Heal()
-	{
-
-	}
-
-	[Client]
-	void BlockAttack()
-	{
-
-	}
-
-	[Client]
-	void Dodge()
-	{
-
-	}
-
-	[Client]
-	void ClimbWall()
-	{
-
-	}
-
-	[Client]
-	void SwimUnderwater()
-	{
-
-	}
-
-	[Client]
-	void DriveVehicle()
-	{
-
-	}
-
-	[Client]
-	void OpenDoor()
-	{
-
-	}
-
-	[Client]
-	void PickupObject()
-	{
-
-	}
-
-	[Client]
-	void ThrowGrenade()
-	{
-
-	}
-
-	[Client]
-	void AimWeapon()
-	{
-
-	}
-
-	[Client]
-	void ActivateSkill()
-	{
-
-	}
-
-	[Client]
-	void SendMessage()
-	{
-
-	}
-
-	[Client]
-	void ViewMap()
-	{
-
-	}
-
-	[Client]
-	void SaveProgress()
-	{
-
-	}
-
-	[Client]
-	void PauseGame()
-	{
-
-	}
-
-	[Client]
-	void ToggleFlashlight()
-	{
-
-	}
-
-	[Client]
-	void CheckHealth()
-	{
-
-	}
-
-	[Client(200)]
-	void RequestBackup()
+	[Server(Target = Target.Self, RequiresOwnership = true, SequenceChannel = BB.a + 5, DeliveryMode = DeliveryMode.Unreliable)]
+	public void SetNisddck2(Channel channel)
 	{
 
 	}

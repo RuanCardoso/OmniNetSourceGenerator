@@ -127,7 +127,7 @@ namespace OmniNetSourceGenerator
                                     methodBody.AppendLine($"{methodName}({string.Join(", ", Enumerable.Repeat("default", parameters.Count))});");
                                     if (!GenHelper.IsManualRpc(method))
                                     {
-                                        memberList.Add(GenerateRpcMethod(method, attribute, currentId));
+                                        memberList.Add(GenerateRpcMethod(method, attribute, currentId, isServerRpc, classModel));
                                         bool requiresPeer = isDualBehaviour || isClientBehaviour || isServerBehaviour;
                                         var directRpc = GenerateDirectRpcMethod(method, currentId, isServerRpc, requiresPeer: requiresPeer);
                                         var directPeerRpc = GenerateDirectPeerRpcMethod(method, currentId);
@@ -278,7 +278,7 @@ namespace OmniNetSourceGenerator
                     .WithType(ParseTypeName("DeliveryMode"))
                     .WithDefault(EqualsValueClause(ParseExpression("DeliveryMode.ReliableOrdered"))),
                 Parameter(Identifier("channel"))
-                    .WithType(ParseTypeName("int"))
+                    .WithType(ParseTypeName("byte"))
                     .WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(0))))
             };
 
@@ -307,10 +307,13 @@ namespace OmniNetSourceGenerator
                 )
             );
 
-            var CallRpcParameters = ParseStatement($"Server.SetRpcParameters({rpcId}, mode, target, channel);");
+            var CallGetRpcParameters = ParseStatement($"Server.GetRpcParameters({rpcId}, out var originalMode, out var originalTarget, out var originalChannel);");
+            var CallSetRpcParameters = ParseStatement($"Server.SetRpcParameters({rpcId}, mode, target, channel);");
+            var CallSetOriginalRpcParameters = ParseStatement($"Server.SetRpcParameters({rpcId}, originalMode, originalTarget, originalChannel);");
             List<StatementSyntax> body = new List<StatementSyntax>
             {
-                CallRpcParameters,
+                CallGetRpcParameters,
+                CallSetRpcParameters,
             };
 
             if (originalParams.Count > 0)
@@ -320,6 +323,7 @@ namespace OmniNetSourceGenerator
                 body.Add(ParseStatement($"_buffer_.WriteAsBinary<{parameter.Type}>({parameter.Identifier.Text});"));
 
             body.Add(rpcCall);
+            body.Add(CallSetOriginalRpcParameters);
             return MethodDeclaration(
                     PredefinedType(Token(SyntaxKind.VoidKeyword)),
                     methodName
@@ -371,7 +375,7 @@ namespace OmniNetSourceGenerator
             );
             extraParams.Add(
                 Parameter(Identifier("channel"))
-                    .WithType(ParseTypeName("int"))
+                    .WithType(ParseTypeName("byte"))
                     .WithDefault(EqualsValueClause(LiteralExpression(SyntaxKind.NumericLiteralExpression, Literal(0))))
             );
 
@@ -412,7 +416,9 @@ namespace OmniNetSourceGenerator
                 )
             );
 
-            var CallRpcParameters = !isServerRpc ? ParseStatement($"Server.SetRpcParameters({rpcId}, mode, target, channel);") : ParseStatement($"Client.SetRpcParameters({rpcId}, mode, channel);");
+            var CallGetRpcParameters = !isServerRpc ? ParseStatement($"Server.GetRpcParameters({rpcId}, out var originalMode, out var originalTarget, out var originalChannel);") : ParseStatement($"Client.GetRpcParameters({rpcId}, out var originalMode, out var originalChannel);");
+            var CallSetRpcParameters = !isServerRpc ? ParseStatement($"Server.SetRpcParameters({rpcId}, mode, target, channel);") : ParseStatement($"Client.SetRpcParameters({rpcId}, mode, channel);");
+            var CallSetOriginalRpcParameters = !isServerRpc ? ParseStatement($"Server.SetRpcParameters({rpcId}, originalMode, originalTarget, originalChannel);") : ParseStatement($"Client.SetRpcParameters({rpcId}, originalMode, originalChannel);");
             return MethodDeclaration(
                     PredefinedType(Token(SyntaxKind.VoidKeyword)),
                     methodName
@@ -421,11 +427,11 @@ namespace OmniNetSourceGenerator
                 .WithParameterList(
                     ParameterList(SeparatedList(allParams))
                 )
-                .WithBody(Block(new[] { CallRpcParameters, rpcCall }));
+                .WithBody(Block(new[] { CallGetRpcParameters, CallSetRpcParameters, rpcCall, CallSetOriginalRpcParameters }));
         }
 
         // read
-        private MethodDeclarationSyntax GenerateRpcMethod(MethodDeclarationSyntax method, AttributeSyntax attribute, byte id)
+        private MethodDeclarationSyntax GenerateRpcMethod(MethodDeclarationSyntax method, AttributeSyntax attribute, byte id, bool isServerAttribute, SemanticModel classModel)
         {
             var statements = new List<StatementSyntax>();
             var methodParameters = method.ParameterList.Parameters;
@@ -452,6 +458,87 @@ namespace OmniNetSourceGenerator
                 )
             ));
 
+            // ArgumentIndex is ignored here because all parameters are optional and can be provided in any order.
+            bool requiresOwnership = attribute.GetArgumentValue("RequiresOwnership", ArgumentIndex.None, classModel, false);
+            DeliveryMode deliveryMode = attribute.GetArgumentValue("DeliveryMode", ArgumentIndex.None, classModel, DeliveryMode.ReliableOrdered);
+            Target target = attribute.GetArgumentValue("Target", ArgumentIndex.None, classModel, Target.Auto);
+            byte sequenceChannel = attribute.GetArgumentValue<byte>("SequenceChannel", ArgumentIndex.None, classModel, 0);
+
+            var serverArgumentList = AttributeArgumentList(
+                SeparatedList<AttributeArgumentSyntax>(
+                    new SyntaxNodeOrToken[]{
+                        AttributeArgument(
+                            LiteralExpression(
+                                SyntaxKind.NumericLiteralExpression,
+                                Literal(id))),
+                        Token(SyntaxKind.CommaToken),
+                        AttributeArgument(
+                            MemberAccessExpression(
+                                SyntaxKind.SimpleMemberAccessExpression,
+                                IdentifierName("DeliveryMode"),
+                                IdentifierName($"{deliveryMode}")))
+                        .WithNameEquals(
+                            NameEquals(
+                                IdentifierName("DeliveryMode"))),
+                        Token(SyntaxKind.CommaToken),
+                        AttributeArgument(
+                            MemberAccessExpression(
+                                SyntaxKind.SimpleMemberAccessExpression,
+                                IdentifierName("Target"),
+                                IdentifierName($"{target}")))
+                        .WithNameEquals(
+                            NameEquals(
+                                IdentifierName("Target"))),
+                        Token(SyntaxKind.CommaToken),
+                        AttributeArgument(
+                            LiteralExpression(
+                                 requiresOwnership
+                                 ? SyntaxKind.TrueLiteralExpression
+                                 : SyntaxKind.FalseLiteralExpression))
+                        .WithNameEquals(
+                            NameEquals(
+                                IdentifierName("RequiresOwnership"))),
+                        Token(SyntaxKind.CommaToken),
+                        AttributeArgument(
+                            LiteralExpression(
+                                SyntaxKind.NumericLiteralExpression,
+                                Literal(sequenceChannel)))
+                        .WithNameEquals(
+                            NameEquals(
+                                IdentifierName("SequenceChannel")))}));
+
+            var clientArgumentList = AttributeArgumentList(
+                SeparatedList<AttributeArgumentSyntax>(
+                    new SyntaxNodeOrToken[]
+                    {
+                        // id
+                        AttributeArgument(
+                            LiteralExpression(
+                                SyntaxKind.NumericLiteralExpression,
+                                Literal(id))),
+                        Token(SyntaxKind.CommaToken),
+            
+                        // DeliveryMode
+                        AttributeArgument(
+                            MemberAccessExpression(
+                                SyntaxKind.SimpleMemberAccessExpression,
+                                IdentifierName("DeliveryMode"),
+                                IdentifierName($"{deliveryMode}")))
+                        .WithNameEquals(
+                            NameEquals(
+                                IdentifierName("DeliveryMode"))),
+                        Token(SyntaxKind.CommaToken),
+            
+                        // SequenceChannel
+                        AttributeArgument(
+                            LiteralExpression(
+                                SyntaxKind.NumericLiteralExpression,
+                                Literal(sequenceChannel)))
+                        .WithNameEquals(
+                            NameEquals(
+                                IdentifierName("SequenceChannel")))
+                    }));
+
             return MethodDeclaration(method.ReturnType, Identifier(GenHelper.GenerateMethodName()))
             .WithModifiers(TokenList(Token(SyntaxKind.ProtectedKeyword)))
             .WithAttributeLists(
@@ -459,13 +546,7 @@ namespace OmniNetSourceGenerator
                 AttributeList(
                     SingletonSeparatedList(
                         Attribute(attribute.Name)
-                        .WithArgumentList(
-                            AttributeArgumentList(
-                                SingletonSeparatedList(
-                                    AttributeArgument(
-                                        LiteralExpression(
-                                            SyntaxKind.NumericLiteralExpression,
-                                            Literal(id))))))))))
+                        .WithArgumentList(isServerAttribute ? serverArgumentList : clientArgumentList)))))
             .AddAttributeLists(
                 AttributeList(
                    SeparatedList(
